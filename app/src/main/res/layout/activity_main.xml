@@ -21,6 +21,7 @@
         android:orientation="horizontal"
         android:id="@+id/drawer">
 
+        <!-- Drawer contents -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
@@ -29,6 +30,17 @@
             android:id="@+id/drawer_linear"
             android:orientation="vertical">
 
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:id="@+id/scroll_view">
+
+                <view.CollapseFileTreeView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/file_view"/>
+
+            </ScrollView>
 
         </LinearLayout>
 

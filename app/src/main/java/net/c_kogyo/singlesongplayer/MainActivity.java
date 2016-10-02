@@ -1,7 +1,12 @@
 package net.c_kogyo.singlesongplayer;
 
+import android.Manifest;
 import android.animation.ValueAnimator;
+import android.content.pm.PackageManager;
 import android.graphics.Point;
+import android.os.Environment;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Display;
@@ -11,6 +16,10 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 
+import java.io.File;
+
+import view.CollapseFileTreeView;
+
 public class MainActivity extends AppCompatActivity {
 
     @Override
@@ -19,11 +28,13 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         initDrawer();
+        initFileView();
 
     }
 
     private int drawerStride;
     private LinearLayout drawer;
+    private ViewGroup.MarginLayoutParams drawerParams;
     private void initDrawer() {
 
         drawer = (LinearLayout) findViewById(R.id.drawer);
@@ -34,11 +45,11 @@ public class MainActivity extends AppCompatActivity {
         Display display = getWindowManager().getDefaultDisplay();
         Point point = new Point();
         display.getSize(point);
-        drawerStride = point.x - tabWidth;
+        drawerStride = tabWidth - point.x;
 
-        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-        params.rightMargin = drawerStride;
-        drawer.setLayoutParams(params);
+        drawerParams = new FrameLayout.LayoutParams(point.x, ViewGroup.LayoutParams.MATCH_PARENT);
+        drawerParams.leftMargin = drawerStride;
+        drawer.setLayoutParams(drawerParams);
         drawer.requestLayout();
 
     }
@@ -69,9 +80,8 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onAnimationUpdate(ValueAnimator valueAnimator) {
 
-                        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-                        params.rightMargin = (int) valueAnimator.getAnimatedValue();
-                        drawer.setLayoutParams(params);
+                        drawerParams.leftMargin =  (int) valueAnimator.getAnimatedValue();
+                        drawer.setLayoutParams(drawerParams);
 
                         drawer.requestLayout();
                     }
@@ -85,5 +95,77 @@ public class MainActivity extends AppCompatActivity {
         });
 
 
+    }
+
+    private final int PERMISSIONS_REQUEST_READ_EXTERNAL_STRAGE = 100;
+    private CollapseFileTreeView fileView;
+    private void initFileView(){
+
+        // Here, thisActivity is the current activity
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+
+            // Should we show an explanation?
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                    Manifest.permission.READ_EXTERNAL_STORAGE)) {
+
+                // Show an expanation to the user *asynchronously* -- don't block
+                // this thread waiting for the user's response! After the user
+                // sees the explanation, try again to request the permission.
+
+            } else {
+
+                // No explanation needed, we can request the permission.
+
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                        PERMISSIONS_REQUEST_READ_EXTERNAL_STRAGE);
+
+                // MY_PERMISSIONS_REQUEST_READ_CONTACTS is an
+                // app-defined int constant. The callback method gets the
+                // result of the request.
+            }
+        } else {
+            updateFileView();
+        }
+
+    }
+
+    private void updateFileView() {
+
+        fileView = (CollapseFileTreeView) findViewById(R.id.file_view);
+        File exDir = Environment.getExternalStorageDirectory();
+        fileView.setFile(exDir, new CollapseFileTreeView.OnContainerHeightUpdateListener() {
+            @Override
+            public void onContainerHeightUpdate() {
+                findViewById(R.id.scroll_view).requestLayout();
+            }
+        });
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case PERMISSIONS_REQUEST_READ_EXTERNAL_STRAGE: {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+                    // permission was granted, yay! Do the
+                    // contacts-related task you need to do.
+//                    updateFileView();
+
+
+                } else {
+
+                    // permission denied, boo! Disable the
+                    // functionality that depends on this permission.
+                }
+                return;
+            }
+
+            // other 'case' lines to check for other
+            // permissions this app might request
+        }
     }
 }
