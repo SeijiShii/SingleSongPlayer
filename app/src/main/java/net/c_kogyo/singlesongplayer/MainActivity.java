@@ -97,7 +97,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private final int PERMISSIONS_REQUEST_READ_EXTERNAL_STRAGE = 100;
+    private final int PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE = 100;
     private CollapseFileTreeView fileView;
     private void initFileView(){
 
@@ -118,7 +118,7 @@ public class MainActivity extends AppCompatActivity {
 
                 ActivityCompat.requestPermissions(this,
                         new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
-                        PERMISSIONS_REQUEST_READ_EXTERNAL_STRAGE);
+                        PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE);
 
                 // MY_PERMISSIONS_REQUEST_READ_CONTACTS is an
                 // app-defined int constant. The callback method gets the
@@ -134,19 +134,23 @@ public class MainActivity extends AppCompatActivity {
 
         fileView = (CollapseFileTreeView) findViewById(R.id.file_view);
         File exDir = Environment.getExternalStorageDirectory();
-        fileView.setFile(exDir, new CollapseFileTreeView.OnContainerHeightUpdateListener() {
+        fileView.setFile(exDir, new CollapseFileTreeView.OnAnimationUpdateListener()
+        {
             @Override
-            public void onContainerHeightUpdate() {
-                findViewById(R.id.scroll_view).requestLayout();
+            public void onUpdateContainer() {
+
+//                findViewById(R.id.scroll_view).requestLayout();
             }
+
         });
+
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode,
                                            String permissions[], int[] grantResults) {
         switch (requestCode) {
-            case PERMISSIONS_REQUEST_READ_EXTERNAL_STRAGE: {
+            case PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE: {
                 // If request is cancelled, the result arrays are empty.
                 if (grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {

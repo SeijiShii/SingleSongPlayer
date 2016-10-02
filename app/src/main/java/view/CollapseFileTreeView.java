@@ -1,8 +1,11 @@
 package view;
 
+import android.animation.Animator;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.util.AttributeSet;
+import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -18,11 +21,16 @@ import java.io.File;
 
 public class CollapseFileTreeView extends LinearLayout {
 
+    private OnAnimationUpdateListener mUpdateListener;
+
     private File mFile;
     private View v;
+    private int fileHeight;
 
-    public CollapseFileTreeView(Context context, File file) {
+    public CollapseFileTreeView(Context context, File file, OnAnimationUpdateListener listener) {
         super(context);
+
+        mUpdateListener = listener;
 
         mFile = file;
         initCommon();
@@ -47,19 +55,72 @@ public class CollapseFileTreeView extends LinearLayout {
     @Override
     protected void onFinishInflate() {
         super.onFinishInflate();
-
         initCommon();
     }
 
     private void initCommon() {
 
+        fileHeight = getContext().getResources().getDimensionPixelSize(R.dimen.file_height);
+
         v = inflate(getContext(), R.layout.collapse_file_tree_view, this);
 
         mainCell = (LinearLayout) v.findViewById(R.id.main_cell);
+
         iconImage = (ImageView) v.findViewById(R.id.icon_image);
         textView = (TextView) v.findViewById(R.id.text);
         childContainer = (LinearLayout) v.findViewById(R.id.child_container);
 
+    }
+
+    private void updateViews() {
+        updateIconImageView();
+        updateTextView();
+
+        mainCell.setOnTouchListener(new OnTouchListener() {
+            @Override
+            public boolean onTouch(View view, MotionEvent motionEvent) {
+
+                switch (motionEvent.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+
+                        mainCell.setAlpha(0.5f);
+
+                        return true;
+                    case MotionEvent.ACTION_UP:
+
+                        mainCell.setAlpha(1f);
+
+                        // ディレクトリとファイルでは挙動が違う
+                        if (mFile.isDirectory()) {
+                            animateChildContainer();
+                        } else if (isMP3Or4(mFile)) {
+
+                        }
+                        return true;
+                    case MotionEvent.ACTION_CANCEL:
+                        mainCell.setAlpha(1f);
+                        return true;
+                }
+
+                return false;
+            }
+        });
+
+
+    }
+
+    private boolean isMP3Or4(File file) {
+
+        // 拡張子を取得
+        String[] ss = file.getName().split(".");
+
+        if (ss.length > 2) {
+            String extension = ss[ss.length - 1];
+            if (extension.equals("mp3") || extension.equals("mp4")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void updateIconImageView() {
@@ -68,7 +129,7 @@ public class CollapseFileTreeView extends LinearLayout {
 
         if (mFile.isDirectory()) {
             iconImage.setBackgroundResource(R.drawable.dir_icon);
-        } else {
+        } else if (isMP3Or4(mFile)) {
 
         }
     }
@@ -82,7 +143,7 @@ public class CollapseFileTreeView extends LinearLayout {
         textView.setText(titleText);
     }
 
-    private void updateContainer() {
+    public void addChildren() {
 
         if (mFile == null || !mFile.isDirectory()) return;
 
@@ -90,76 +151,83 @@ public class CollapseFileTreeView extends LinearLayout {
 
             if (file.isDirectory()) {
 
-                CollapseFileTreeView treeView = new CollapseFileTreeView(getContext(), file);
-                treeView.setOnContainerHeightUpdateListener(mListener);
+                CollapseFileTreeView treeView
+                        = new CollapseFileTreeView(getContext(),
+                            file,
+                            new OnAnimationUpdateListener(){
+
+                                @Override
+                                public void onUpdateContainer() {
+
+                                    CollapseFileTreeView.this.updateContainerHeight();
+                                    mUpdateListener.onUpdateContainer();
+
+                                    Log.i(CollapseFileTreeView.class.getSimpleName(),  mFile.getName() + ": containerHeight: " + childContainer.getHeight());
+                                }
+
+                            });
                 childContainer.addView(treeView);
 
-            } else {
-
-                // 拡張子を取得
-                String[] ss = file.getName().split(".");
-
-                if (ss.length > 2) {
-                    String extension = ss[ss.length - 1];
+            } else if (isMP3Or4(file)) {
 
 
-                    if (extension.equals("mp3")) {
-
-                    }
-                }
             }
         }
 
         childContainer.getLayoutParams().height = 0;
 
-        mainCell.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View view) {
+    }
 
-                animateChildContainer();
-            }
-        });
+    private void updateContainerHeight() {
+
+        int height = 0 ;
+
+        for (int i = 0 ; i < childContainer.getChildCount() ; i++ ) {
+
+            height += ((CollapseFileTreeView)(childContainer.getChildAt(i))).getLayoutParams().height;
+
+        }
+
+        childContainer.getLayoutParams().height = height;
 
     }
 
-    private OnContainerHeightUpdateListener mListener;
-    public void setFile(File file, OnContainerHeightUpdateListener listener) {
+    public void setFile(File file, OnAnimationUpdateListener listener) {
+
+        this.mUpdateListener = listener;
         this.mFile = file;
 
-        mListener = listener;
         updateViews();
-    }
-
-
-    private void updateViews() {
-        updateIconImageView();
-        updateTextView();
-        updateContainer();
+        addChildren();
     }
 
     private boolean isChildOpen = false;
     private void animateChildContainer() {
 
+        // 孫階層のファイルとフォルダをセット
+        addGrandChildren();
+
         int origin, target;
 
-        int openHeight = (int) getContext().getResources().getDimension(R.dimen.file_height) * childContainer.getChildCount();
-
         if (isChildOpen) {
-            origin = openHeight;
+            origin = getOpenContainerHeight();
             target = 0;
         } else {
             origin = 0;
-            target = openHeight;
+            target = getOpenContainerHeight();
         }
 
         ValueAnimator animator = ValueAnimator.ofInt(origin, target);
         animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(ValueAnimator valueAnimator) {
+
+                // この時点でchildContainerはWRAP_CONTENTではない。
                 childContainer.getLayoutParams().height = (int) valueAnimator.getAnimatedValue();
+
                 childContainer.requestLayout();
-                CollapseFileTreeView.this.requestLayout();
-                mListener.onContainerHeightUpdate();
+
+                mUpdateListener.onUpdateContainer();
 
             }
         });
@@ -169,14 +237,41 @@ public class CollapseFileTreeView extends LinearLayout {
         isChildOpen = !isChildOpen;
     }
 
-    public void setOnContainerHeightUpdateListener(OnContainerHeightUpdateListener listener) {
-        mListener = listener;
+    private void addGrandChildren() {
+
+        for (int i = 0 ; i < this.childContainer.getChildCount() ; i++ ) {
+
+            CollapseFileTreeView view = (CollapseFileTreeView) childContainer.getChildAt(i);
+
+            if (view.childContainer.getChildCount() <= 0) {
+                view.addChildren();
+            }
+        }
     }
 
-    public interface OnContainerHeightUpdateListener {
+    private int getOpenContainerHeight() {
 
-        void onContainerHeightUpdate();
+        int sum = 0;
+        for (int i = 0 ; i < childContainer.getChildCount() ; i++ ) {
+
+            sum += ((CollapseFileTreeView) childContainer.getChildAt(i)).getViewHeight();
+
+        }
+        return sum;
     }
 
+    private int getViewHeight() {
+
+        if (! isChildOpen) return fileHeight;
+
+        return fileHeight + getOpenContainerHeight();
+
+    }
+
+    public interface OnAnimationUpdateListener {
+
+        void onUpdateContainer();
+
+    }
 
 }
