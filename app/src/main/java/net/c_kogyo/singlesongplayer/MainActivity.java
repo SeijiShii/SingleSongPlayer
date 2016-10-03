@@ -23,8 +23,10 @@ import com.google.android.gms.ads.MobileAds;
 import java.io.File;
 
 import view.CollapseFileTreeView;
+import view.SoundFileListCell;
 
 public class MainActivity extends AppCompatActivity {
+    
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,6 +38,8 @@ public class MainActivity extends AppCompatActivity {
 
         initDrawer();
         initFileView();
+
+        initQueueList();
 
     }
 
@@ -166,6 +170,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(File file) {
                 // TODO ファイルクリック時の処理
                 animateDrawer();
+                addSoundFile(file);
             }
         });
 
@@ -196,5 +201,18 @@ public class MainActivity extends AppCompatActivity {
             // other 'case' lines to check for other
             // permissions this app might request
         }
+    }
+
+    private LinearLayout queueList;
+    private void initQueueList() {
+
+        queueList = (LinearLayout) findViewById(R.id.queue_list);
+    }
+
+    private void addSoundFile(File file) {
+
+        SoundFileListCell cell = new SoundFileListCell(this, file);
+        queueList.addView(cell);
+
     }
 }
