@@ -1,61 +1,117 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/activity_main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="net.c_kogyo.singlesongplayer.MainActivity">
-
-    <LinearLayout
+    tools:context="net.c_kogyo.singlesongplayer.MainActivity"
+    xmlns:ads="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical">
+    
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:id="@+id/base_linear"
-        android:orientation="vertical"
-        android:background="#FFF"/>
+        android:layout_height="0dp"
+        android:layout_weight="1">
 
-    <!-- Drawer  -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="horizontal"
-        android:id="@+id/drawer">
-
-        <!-- Drawer contents -->
+        <!-- Main -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:background="#284B63"
-            android:id="@+id/drawer_linear"
-            android:orientation="vertical">
+            android:id="@+id/base_linear"
+            android:orientation="vertical"
+            android:background="#FFF">
 
             <ScrollView
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:id="@+id/scroll_view">
+                android:layout_height="0dp"
+                android:layout_weight="1">
 
-                <view.CollapseFileTreeView
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:id="@+id/file_view"/>
+                    android:orientation="vertical"
+                    android:id="@+id/queue_list"/>
 
             </ScrollView>
 
+            <Button
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/button_height"
+                android:id="@+id/play_button"
+                android:background="@drawable/dark_blue_selector"
+                android:textColor="#FFF"
+                android:text="@string/play_button"
+                android:gravity="center"
+                android:textSize="15sp"/>
+
         </LinearLayout>
 
-        <RelativeLayout
-            android:layout_width="@dimen/dir_tab_width"
-            android:layout_height="match_parent">
+        <!-- Drawer  -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:id="@+id/drawer">
 
-            <ImageView
+            <!-- Drawer contents -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="#284B63"
+                android:id="@+id/drawer_linear"
+                android:orientation="vertical">
+
+                <ScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:id="@+id/scroll_view">
+
+                    <view.CollapseFileTreeView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:id="@+id/file_view"/>
+
+                </ScrollView>
+
+            </LinearLayout>
+
+            <RelativeLayout
                 android:layout_width="@dimen/dir_tab_width"
-                android:layout_height="40dp"
-                android:background="@drawable/dir_tab"
-                android:id="@+id/dir_tab"/>
+                android:layout_height="match_parent">
 
-        </RelativeLayout>
+                <ImageView
+                    android:layout_width="@dimen/dir_tab_width"
+                    android:layout_height="40dp"
+                    android:background="@drawable/dir_tab"
+                    android:id="@+id/dir_tab"/>
 
-    </LinearLayout>
+            </RelativeLayout>
 
-</FrameLayout>
+        </LinearLayout>
+        
+    </FrameLayout>
+
+    <!-- Ad -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="65dp"
+        android:background="@color/ad_back_gray">
+
+        <com.google.android.gms.ads.AdView
+            android:id="@+id/adView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_alignParentBottom="true"
+            ads:adSize="BANNER"
+            ads:adUnitId="@string/banner_ad_unit_id"
+            android:layout_centerInParent="true">
+
+        </com.google.android.gms.ads.AdView>
+
+    </RelativeLayout>
+
+
+</LinearLayout>

@@ -16,6 +16,10 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.MobileAds;
+
 import java.io.File;
 
 import view.CollapseFileTreeView;
@@ -25,10 +29,23 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_main);
+
+        initAdView();
 
         initDrawer();
         initFileView();
+
+    }
+
+    private void initAdView() {
+
+        MobileAds.initialize(getApplicationContext(), getString(R.string.banner_ad_unit_id));
+
+        AdView mAdView = (AdView) findViewById(R.id.adView);
+        AdRequest adRequest = new AdRequest.Builder().build();
+        mAdView.loadAd(adRequest);
 
     }
 
@@ -66,34 +83,37 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
 
-                int origin, target;
-                if (isDrawerOpen) {
-                    origin = 0;
-                    target = drawerStride;
-                } else {
-                    origin = drawerStride;
-                    target = 0;
-                }
-
-                ValueAnimator animator = ValueAnimator.ofInt(origin, target);
-                animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                    @Override
-                    public void onAnimationUpdate(ValueAnimator valueAnimator) {
-
-                        drawerParams.leftMargin =  (int) valueAnimator.getAnimatedValue();
-                        drawer.setLayoutParams(drawerParams);
-
-                        drawer.requestLayout();
-                    }
-                });
-                animator.setDuration(500);
-                animator.start();
-
-                isDrawerOpen = !isDrawerOpen;
-
+                animateDrawer();
             }
         });
+    }
 
+    private void animateDrawer() {
+
+        int origin, target;
+        if (isDrawerOpen) {
+            origin = 0;
+            target = drawerStride;
+        } else {
+            origin = drawerStride;
+            target = 0;
+        }
+
+        ValueAnimator animator = ValueAnimator.ofInt(origin, target);
+        animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator valueAnimator) {
+
+                drawerParams.leftMargin =  (int) valueAnimator.getAnimatedValue();
+                drawer.setLayoutParams(drawerParams);
+
+                drawer.requestLayout();
+            }
+        });
+        animator.setDuration(300);
+        animator.start();
+
+        isDrawerOpen = !isDrawerOpen;
 
     }
 
@@ -145,6 +165,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(File file) {
                 // TODO ファイルクリック時の処理
+                animateDrawer();
             }
         });
 

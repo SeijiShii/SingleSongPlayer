@@ -2,6 +2,8 @@
 <resources>
     <color name="colorPrimary">#284B63</color>
     <color name="colorPrimaryDark">#3C6E71</color>
+    <color name="darkBlueBlight">#8dc0c3</color>
     <color name="colorAccent">#9BF46B</color>
     <color name="offWhite">#F4F4F4</color>
+    <color name="ad_back_gray">#555</color>
 </resources>
