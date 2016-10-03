@@ -88,7 +88,7 @@ public class MainActivity extends AppCompatActivity {
         String data = prefs.getString(QUEUE_LIST_TAG, null);
 
         queueList = new ArrayList<>();
-        if (data == null) return;
+        if (data == null || data.equals("")) return;
 
         String[] ss = data.split(",");
 
@@ -270,7 +270,12 @@ public class MainActivity extends AppCompatActivity {
 
         queueList.add(file);
 
-        SoundFileListCell cell = new SoundFileListCell(this, file, true);
+        SoundFileListCell cell = new SoundFileListCell(this, file, true, new SoundFileListCell.PostCompressListener() {
+            @Override
+            public void postCompress(SoundFileListCell cell) {
+                postCompressCell(cell);
+            }
+        });
         queueListView.addView(cell);
 
     }
@@ -280,7 +285,26 @@ public class MainActivity extends AppCompatActivity {
         queueListView.removeAllViews();
 
         for (File file : queueList) {
-            SoundFileListCell cell = new SoundFileListCell(this, file, false);
+            SoundFileListCell cell = new SoundFileListCell(this, file, false, new SoundFileListCell.PostCompressListener() {
+                @Override
+                public void postCompress(SoundFileListCell cell) {
+                    postCompressCell(cell);
+                }
+            });
             queueListView.addView(cell);        }
+    }
+
+    private void postCompressCell(SoundFileListCell cell) {
+
+        for ( int i = 0 ; i < queueListView.getChildCount() ; i++ ) {
+
+            if (cell.equals(queueListView.getChildAt(i))) {
+
+                queueListView.removeViewAt(i);
+                queueList.remove(i);
+
+            }
+        }
+
     }
 }

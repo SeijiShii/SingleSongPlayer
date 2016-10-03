@@ -1,5 +1,6 @@
 package view;
 
+import android.animation.Animator;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -28,14 +29,17 @@ public class SoundFileListCell extends LinearLayout {
     private File mFile;
     private int cellHeight;
     private MediaMetadataRetriever mRetriever;
-    private boolean mFadein;
+    private boolean mFadeIn;
 
-    public SoundFileListCell(Context context, File file, boolean fadeIn) {
+    private PostCompressListener mCompressListener;
+
+    public SoundFileListCell(Context context, File file, boolean fadeIn, PostCompressListener listener) {
 
         super(context);
 
+        mCompressListener = listener;
         mFile = file;
-        mFadein = fadeIn;
+        mFadeIn = fadeIn;
 
         init();
     }
@@ -58,7 +62,7 @@ public class SoundFileListCell extends LinearLayout {
         initSubTitleText();
         initRemoveButton();
 
-        if (mFadein) {
+        if (mFadeIn) {
 
             this.setAlpha(0f);
 
@@ -124,6 +128,80 @@ public class SoundFileListCell extends LinearLayout {
 
     }
 
+    private void fadeOut() {
+
+        ValueAnimator animator = ValueAnimator.ofFloat(1, 0);
+        animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator valueAnimator) {
+                SoundFileListCell.this.setAlpha((float) valueAnimator.getAnimatedValue());
+                SoundFileListCell.this.requestLayout();
+            }
+        });
+        animator.setDuration(500);
+        animator.addListener(new Animator.AnimatorListener() {
+            @Override
+            public void onAnimationStart(Animator animator) {
+
+            }
+
+            @Override
+            public void onAnimationEnd(Animator animator) {
+
+                compressView();
+            }
+
+            @Override
+            public void onAnimationCancel(Animator animator) {
+
+            }
+
+            @Override
+            public void onAnimationRepeat(Animator animator) {
+
+            }
+        });
+        animator.start();
+
+    }
+
+    private void compressView() {
+
+        ValueAnimator animator = ValueAnimator.ofInt(this.cellHeight, 0);
+        animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator valueAnimator) {
+                SoundFileListCell.this.getLayoutParams().height = (int) valueAnimator.getAnimatedValue();
+                SoundFileListCell.this.requestLayout();
+            }
+        });
+        animator.setDuration(300);
+        animator.addListener(new Animator.AnimatorListener() {
+            @Override
+            public void onAnimationStart(Animator animator) {
+
+            }
+
+            @Override
+            public void onAnimationEnd(Animator animator) {
+
+                mCompressListener.postCompress(SoundFileListCell.this);
+
+            }
+
+            @Override
+            public void onAnimationCancel(Animator animator) {
+
+            }
+
+            @Override
+            public void onAnimationRepeat(Animator animator) {
+
+            }
+        });
+        animator.start();
+    }
+
     private Bitmap getBitmap() {
 
         byte[] data = mRetriever.getEmbeddedPicture();
@@ -172,6 +250,7 @@ public class SoundFileListCell extends LinearLayout {
                     case MotionEvent.ACTION_UP:
 
                         removeButton.setAlpha(1f);
+                        fadeOut();
 
                         return true;
 
@@ -186,6 +265,14 @@ public class SoundFileListCell extends LinearLayout {
                 return false;
             }
         });
+    }
+
+    public File getFile() {
+        return mFile;
+    }
+
+    public interface PostCompressListener {
+        void postCompress(SoundFileListCell cell);
     }
 
 }
