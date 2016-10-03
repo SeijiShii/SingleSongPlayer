@@ -85,7 +85,8 @@
                     android:layout_width="@dimen/dir_tab_width"
                     android:layout_height="40dp"
                     android:background="@drawable/dir_tab"
-                    android:id="@+id/dir_tab"/>
+                    android:id="@+id/dir_tab"
+                    android:layout_centerVertical="true"/>
 
             </RelativeLayout>
 

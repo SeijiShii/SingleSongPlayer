@@ -1,9 +1,11 @@
 package view;
 
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
+import android.os.Handler;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
@@ -26,12 +28,14 @@ public class SoundFileListCell extends LinearLayout {
     private File mFile;
     private int cellHeight;
     private MediaMetadataRetriever mRetriever;
+    private boolean mFadein;
 
-    public SoundFileListCell(Context context, File file) {
+    public SoundFileListCell(Context context, File file, boolean fadeIn) {
 
         super(context);
 
         mFile = file;
+        mFadein = fadeIn;
 
         init();
     }
@@ -53,6 +57,50 @@ public class SoundFileListCell extends LinearLayout {
         initTitleText();
         initSubTitleText();
         initRemoveButton();
+
+        if (mFadein) {
+
+            this.setAlpha(0f);
+
+            final Handler handler = new Handler();
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+
+                    while (SoundFileListCell.this.getHeight() <= 0) {
+
+                        try {
+                            Thread.sleep(20);
+                        } catch (InterruptedException e) {
+                            //
+                        }
+                    }
+                    handler.post(new Runnable() {
+                        @Override
+                        public void run() {
+
+                         animateFadeIn();
+                        }
+                    });
+                }
+            }).start();
+
+        }
+    }
+
+    private void animateFadeIn() {
+
+        ValueAnimator animator = ValueAnimator.ofFloat(0, 1);
+        animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator valueAnimator) {
+                SoundFileListCell.this.setAlpha((float) valueAnimator.getAnimatedValue());
+                SoundFileListCell.this.requestLayout();
+            }
+        });
+        animator.setDuration(500);
+        animator.start();
+
     }
 
     private void initIconImage() {

@@ -2,6 +2,7 @@ package net.c_kogyo.singlesongplayer;
 
 import android.Manifest;
 import android.animation.ValueAnimator;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Point;
 import android.os.Environment;
@@ -21,12 +22,14 @@ import com.google.android.gms.ads.AdView;
 import com.google.android.gms.ads.MobileAds;
 
 import java.io.File;
+import java.util.ArrayList;
 
 import view.CollapseFileTreeView;
 import view.SoundFileListCell;
 
 public class MainActivity extends AppCompatActivity {
-    
+
+    private ArrayList<File> queueList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,14 +37,68 @@ public class MainActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_main);
 
+        queueList = new ArrayList<>();
+
         initAdView();
 
         initDrawer();
         initFileView();
 
-        initQueueList();
+        initQueueListView();
 
     }
+
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        loadQueueList();
+        setQueueListView();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        saveQueueList();
+    }
+
+    private final String SSP_PREF_TAG = "ssp_pref_tag";
+    private final String QUEUE_LIST_TAG = "queue_list_tag";
+    private void saveQueueList() {
+
+        StringBuilder builder = new StringBuilder();
+
+        for (File file : queueList) {
+
+            builder.append(file.getAbsolutePath()).append(",");
+        }
+
+        String data = builder.toString();
+
+        SharedPreferences prefs = getSharedPreferences(SSP_PREF_TAG, MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putString(QUEUE_LIST_TAG, data);
+        editor.apply();
+    }
+
+    private void loadQueueList() {
+
+        SharedPreferences prefs = getSharedPreferences(SSP_PREF_TAG, MODE_PRIVATE);
+
+        String data = prefs.getString(QUEUE_LIST_TAG, null);
+
+        queueList = new ArrayList<>();
+        if (data == null) return;
+
+        String[] ss = data.split(",");
+
+        for (String s : ss) {
+            queueList.add(new File(s));
+        }
+
+    }
+
+
 
     private void initAdView() {
 
@@ -203,16 +260,27 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private LinearLayout queueList;
-    private void initQueueList() {
+    private LinearLayout queueListView;
+    private void initQueueListView() {
 
-        queueList = (LinearLayout) findViewById(R.id.queue_list);
+        queueListView = (LinearLayout) findViewById(R.id.queue_list);
     }
 
     private void addSoundFile(File file) {
 
-        SoundFileListCell cell = new SoundFileListCell(this, file);
-        queueList.addView(cell);
+        queueList.add(file);
 
+        SoundFileListCell cell = new SoundFileListCell(this, file, true);
+        queueListView.addView(cell);
+
+    }
+
+    private void setQueueListView() {
+
+        queueListView.removeAllViews();
+
+        for (File file : queueList) {
+            SoundFileListCell cell = new SoundFileListCell(this, file, false);
+            queueListView.addView(cell);        }
     }
 }
