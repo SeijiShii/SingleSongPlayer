@@ -134,14 +134,18 @@ public class MainActivity extends AppCompatActivity {
 
         fileView = (CollapseFileTreeView) findViewById(R.id.file_view);
         File exDir = Environment.getExternalStorageDirectory();
-        fileView.setFile(exDir, new CollapseFileTreeView.OnAnimationUpdateListener()
-        {
+        fileView.setFileAndListeners(exDir, new CollapseFileTreeView.OnAnimationUpdateListener() {
             @Override
             public void onUpdateContainer() {
 
 //                findViewById(R.id.scroll_view).requestLayout();
             }
 
+        }, new CollapseFileTreeView.OnFileClickListener() {
+            @Override
+            public void onClick(File file) {
+                // TODO ファイルクリック時の処理
+            }
         });
 
     }

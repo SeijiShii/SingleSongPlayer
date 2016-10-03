@@ -3,12 +3,17 @@ package view;
 import android.animation.Animator;
 import android.animation.ValueAnimator;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.media.MediaMetadataRetriever;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import net.c_kogyo.singlesongplayer.R;
@@ -22,15 +27,20 @@ import java.io.File;
 public class CollapseFileTreeView extends LinearLayout {
 
     private OnAnimationUpdateListener mUpdateListener;
+    private OnFileClickListener mOnFileClickListener;
 
     private File mFile;
     private View v;
     private int fileHeight;
 
-    public CollapseFileTreeView(Context context, File file, OnAnimationUpdateListener listener) {
+    public CollapseFileTreeView(Context context,
+                                File file,
+                                OnAnimationUpdateListener listener,
+                                OnFileClickListener clickListener) {
         super(context);
 
         mUpdateListener = listener;
+        mOnFileClickListener = clickListener;
 
         mFile = file;
         initCommon();
@@ -111,10 +121,13 @@ public class CollapseFileTreeView extends LinearLayout {
 
     private boolean isMP3Or4(File file) {
 
-        // 拡張子を取得
-        String[] ss = file.getName().split(".");
+        // .mp3というディレクトリもある
+        if (file.isDirectory()) return false;
 
-        if (ss.length > 2) {
+        // 拡張子を取得
+        String[] ss = file.getName().split("\\.");
+
+        if (ss.length >= 2) {
             String extension = ss[ss.length - 1];
             if (extension.equals("mp3") || extension.equals("mp4")) {
                 return true;
@@ -126,12 +139,8 @@ public class CollapseFileTreeView extends LinearLayout {
     private void updateIconImageView() {
 
         if (mFile == null) return;
+        iconImage.setBackgroundResource(R.drawable.dir_icon);
 
-        if (mFile.isDirectory()) {
-            iconImage.setBackgroundResource(R.drawable.dir_icon);
-        } else if (isMP3Or4(mFile)) {
-
-        }
     }
 
     private void updateTextView() {
@@ -139,7 +148,6 @@ public class CollapseFileTreeView extends LinearLayout {
         if (mFile == null) return;
 
         String titleText = mFile.getName();
-
         textView.setText(titleText);
     }
 
@@ -153,23 +161,26 @@ public class CollapseFileTreeView extends LinearLayout {
 
                 CollapseFileTreeView treeView
                         = new CollapseFileTreeView(getContext(),
-                            file,
-                            new OnAnimationUpdateListener(){
+                        file,
+                        new OnAnimationUpdateListener() {
 
-                                @Override
-                                public void onUpdateContainer() {
+                            @Override
+                            public void onUpdateContainer() {
 
-                                    CollapseFileTreeView.this.updateContainerHeight();
-                                    mUpdateListener.onUpdateContainer();
+                                CollapseFileTreeView.this.updateContainerHeight();
+                                mUpdateListener.onUpdateContainer();
 
-                                    Log.i(CollapseFileTreeView.class.getSimpleName(),  mFile.getName() + ": containerHeight: " + childContainer.getHeight());
-                                }
+                                Log.i(CollapseFileTreeView.class.getSimpleName(), mFile.getName() + ": containerHeight: " + childContainer.getHeight());
+                            }
 
-                            });
+                        }, mOnFileClickListener);
+
                 childContainer.addView(treeView);
 
             } else if (isMP3Or4(file)) {
 
+                SoundFileCell cell = new SoundFileCell(getContext(), file, mOnFileClickListener);
+                childContainer.addView(cell);
 
             }
         }
@@ -192,9 +203,12 @@ public class CollapseFileTreeView extends LinearLayout {
 
     }
 
-    public void setFile(File file, OnAnimationUpdateListener listener) {
+    public void setFileAndListeners(File file,
+                                    OnAnimationUpdateListener listener,
+                                    OnFileClickListener clickListener) {
 
         this.mUpdateListener = listener;
+        this.mOnFileClickListener = clickListener;
         this.mFile = file;
 
         updateViews();
@@ -203,9 +217,6 @@ public class CollapseFileTreeView extends LinearLayout {
 
     private boolean isChildOpen = false;
     private void animateChildContainer() {
-
-        // 孫階層のファイルとフォルダをセット
-        addGrandChildren();
 
         int origin, target;
 
@@ -235,17 +246,25 @@ public class CollapseFileTreeView extends LinearLayout {
         animator.start();
 
         isChildOpen = !isChildOpen;
+
+        // 孫階層のファイルとフォルダをセット
+        addGrandChildren();
     }
 
     private void addGrandChildren() {
 
         for (int i = 0 ; i < this.childContainer.getChildCount() ; i++ ) {
 
-            CollapseFileTreeView view = (CollapseFileTreeView) childContainer.getChildAt(i);
+            View view = childContainer.getChildAt(i);
 
-            if (view.childContainer.getChildCount() <= 0) {
-                view.addChildren();
+            if (view instanceof CollapseFileTreeView) {
+                CollapseFileTreeView treeView = (CollapseFileTreeView) view;
+
+                if (treeView.childContainer.getChildCount() <= 0) {
+                    treeView.addChildren();
+                }
             }
+
         }
     }
 
@@ -254,8 +273,15 @@ public class CollapseFileTreeView extends LinearLayout {
         int sum = 0;
         for (int i = 0 ; i < childContainer.getChildCount() ; i++ ) {
 
-            sum += ((CollapseFileTreeView) childContainer.getChildAt(i)).getViewHeight();
+            View view = childContainer.getChildAt(i);
 
+            if (view instanceof CollapseFileTreeView) {
+
+                sum += ((CollapseFileTreeView) view).getViewHeight();
+            } else if (view instanceof SoundFileCell) {
+
+                sum += fileHeight;
+            }
         }
         return sum;
     }
@@ -268,10 +294,123 @@ public class CollapseFileTreeView extends LinearLayout {
 
     }
 
+    class SoundFileCell extends LinearLayout{
+
+        private File nFile;
+        private MediaMetadataRetriever mRetriever;
+        private OnFileClickListener mListener;
+
+        public SoundFileCell(Context context, File file, OnFileClickListener listener) {
+            super(context);
+
+            nFile = file;
+            mListener = listener;
+
+            init();
+        }
+
+        public SoundFileCell(Context context, AttributeSet attrs) {
+            super(context, attrs);
+        }
+
+        private View v;
+        private void init() {
+
+            mRetriever = new MediaMetadataRetriever();
+            mRetriever.setDataSource(nFile.getPath());
+
+            v = inflate(getContext(), R.layout.sound_file_cell, this);
+            initIconImage();
+            initTitleText();
+
+            this.setOnTouchListener(new OnTouchListener() {
+                @Override
+                public boolean onTouch(View view, MotionEvent motionEvent) {
+
+                    switch (motionEvent.getAction()) {
+
+                        case MotionEvent.ACTION_DOWN:
+
+                            SoundFileCell.this.setAlpha(0.5f);
+
+                            return true;
+
+                        case  MotionEvent.ACTION_UP:
+
+                            SoundFileCell.this.setAlpha(1f);
+                            mListener.onClick(nFile);
+
+                            return true;
+
+                        case MotionEvent.ACTION_CANCEL:
+
+                            SoundFileCell.this.setAlpha(1f);
+
+                            return true;
+
+                    }
+
+
+                    return false;
+                }
+            });
+
+        }
+
+        private void initIconImage() {
+
+            ImageView iconImage = (ImageView) v.findViewById(R.id.icon_image);
+
+            Bitmap bitmap = getBitmap();
+            if (bitmap != null) {
+
+                iconImage.setImageBitmap(bitmap);
+
+                RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams((int)(fileHeight * 0.8), (int) (fileHeight * 0.8));
+                params.addRule(RelativeLayout.CENTER_IN_PARENT, RelativeLayout.TRUE);
+
+                iconImage.setLayoutParams(params);
+
+            } else {
+
+                iconImage.setBackgroundResource(R.drawable.ompu);
+            }
+
+        }
+
+        private Bitmap getBitmap() {
+
+            byte[] data = mRetriever.getEmbeddedPicture();
+
+            if (data != null) {
+                return  BitmapFactory.decodeByteArray(data, 0, data.length);
+            }
+            return null;
+        }
+
+        private void initTitleText() {
+
+            TextView titleText = (TextView) v.findViewById(R.id.title_text);
+
+            String title = mRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
+            if (title == null || title.length() <= 0) {
+                title = nFile.getName();
+            }
+            titleText.setText(title);
+
+        }
+
+
+    }
+
     public interface OnAnimationUpdateListener {
 
         void onUpdateContainer();
 
+    }
+
+    public interface OnFileClickListener {
+        void onClick(File file);
     }
 
 }
