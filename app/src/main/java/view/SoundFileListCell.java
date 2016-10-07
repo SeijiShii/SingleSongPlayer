@@ -1,15 +1,21 @@
 package view;
 
 import android.animation.Animator;
+import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
+import android.content.ClipData;
+import android.content.ClipDescription;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
 import android.os.Handler;
 import android.util.AttributeSet;
+import android.util.Log;
+import android.view.DragEvent;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewParent;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -19,6 +25,8 @@ import android.widget.TextView;
 import net.c_kogyo.singlesongplayer.R;
 
 import java.io.File;
+
+import static android.R.attr.mimeType;
 
 /**
  * Created by SeijiShii on 2016/10/02.
@@ -61,6 +69,8 @@ public class SoundFileListCell extends LinearLayout {
         initTitleText();
         initSubTitleText();
         initRemoveButton();
+        initForTouch();
+
 
         if (mFadeIn) {
 
@@ -267,9 +277,22 @@ public class SoundFileListCell extends LinearLayout {
         });
     }
 
+
+    private void initForTouch() {
+
+
+
+    }
+
+
+
+
     public File getFile() {
         return mFile;
     }
+
+
+
 
     public interface PostCompressListener {
         void postCompress(SoundFileListCell cell);

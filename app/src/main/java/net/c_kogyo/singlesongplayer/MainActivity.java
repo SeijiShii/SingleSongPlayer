@@ -1,21 +1,38 @@
 package net.c_kogyo.singlesongplayer;
 
 import android.Manifest;
+import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
+import android.content.ClipData;
+import android.content.ClipDescription;
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.Point;
+import android.graphics.drawable.Drawable;
 import android.os.Environment;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.AttributeSet;
+import android.util.Log;
 import android.view.Display;
+import android.view.DragEvent;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ListView;
+import android.widget.RelativeLayout;
+import android.widget.ScrollView;
 
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
@@ -97,8 +114,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
     }
-
-
 
     private void initAdView() {
 
@@ -261,9 +276,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private LinearLayout queueListView;
+    private FrameLayout screenFrame;
+    private ScrollView scrollView;
     private void initQueueListView() {
 
         queueListView = (LinearLayout) findViewById(R.id.queue_list);
+        screenFrame = (FrameLayout) findViewById(R.id.screen_frame);
+        screenFrame.setVisibility(View.INVISIBLE);
+        scrollView = (ScrollView) findViewById(R.id.scroll_view);
+
     }
 
     private void addSoundFile(File file) {
@@ -276,7 +297,7 @@ public class MainActivity extends AppCompatActivity {
                 postCompressCell(cell);
             }
         });
-        queueListView.addView(cell);
+        queueListView.addView(addDragListener(cell));
 
     }
 
@@ -291,7 +312,7 @@ public class MainActivity extends AppCompatActivity {
                     postCompressCell(cell);
                 }
             });
-            queueListView.addView(cell);        }
+            queueListView.addView(addDragListener(cell));        }
     }
 
     private void postCompressCell(SoundFileListCell cell) {
@@ -305,6 +326,246 @@ public class MainActivity extends AppCompatActivity {
 
             }
         }
+    }
+
+    private SoundFileListCell cellDragged;
+    private SoundFileListCell addDragListener(SoundFileListCell cell) {
+
+        final int cellHeight = getResources().getDimensionPixelSize(R.dimen.sound_cell_height);
+
+        cell.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View view) {
+
+                // ドラッグスタート時にcellを仕込む
+                cellDragged = (SoundFileListCell) view;
+                screenFrame.setVisibility(View.VISIBLE);
+                reflectOnScreen(getIndexOfCell(cellDragged));
+
+                view.startDrag(null, new View.DragShadowBuilder(view), null, 0);
+
+                Log.i(SoundFileListCell.class.getSimpleName(), "Start drag! index: " + getIndexOfCell(cellDragged));
+
+                return true;
+            }
+        });
+
+        cell.setOnDragListener(new View.OnDragListener() {
+            @Override
+            public boolean onDrag(View view, DragEvent dragEvent) {
+
+                if (view.equals(cellDragged)) {
+                    return true;
+                }
+
+                SoundFileListCell toCell = (SoundFileListCell) view;
+                int toIndex = getIndexOfCell(toCell);
+                int fromIndex = getIndexOfCell(cellDragged);
+
+                //ドラッグが入ってきたとき上下どちらに退避するか
+
+                switch (dragEvent.getAction()) {
+
+                    case DragEvent.ACTION_DRAG_ENTERED:
+
+                        if (fromIndex == toIndex) return true;
+
+                        // ドラッグが入ってきました。
+
+//                        ImageView cellShadow = new ImageView(MainActivity.this);
+//                        cellShadow.setImageBitmap(getBitmapFromView(toCell));
+//
+//                        ObjectAnimator animator0 = ObjectAnimator.ofFloat(cellShadow, "translationY", 0, target);
+//                        animator0.setDuration(300);
+//                        animator0.start();
+//
+//                        toCell.setAlpha(0.2f);
+
+                        Log.i(SoundFileListCell.class.getSimpleName(), "Drag in! to " + toIndex);
+
+                        if (fromIndex > toIndex) {
+                            //上に向かってドラッグしたということ
+
+                            for (int i = fromIndex - 1  ; i >= toIndex; i-- ) {
+
+                                CellShadow cellShadow = getCellShadowByIndex(i);
+                                ObjectAnimator animator0 = ObjectAnimator.ofFloat(cellShadow, "translationY", 0, cellHeight);
+                                animator0.setDuration(300);
+                                animator0.start();
+
+                            }
+
+                        } else {
+                            // 下に向かってドラッグしたということ
+
+                            for (int i = fromIndex + 1  ; i <= toIndex; i++ ) {
+
+                                CellShadow cellShadow = getCellShadowByIndex(i);
+                                ObjectAnimator animator0 = ObjectAnimator.ofFloat(cellShadow, "translationY", 0, -cellHeight);
+                                animator0.setDuration(300);
+                                animator0.start();
+
+                            }
+                        }
+
+
+
+                        return true;
+
+                    case DragEvent.ACTION_DRAG_EXITED:
+
+                        return false;
+
+                    case DragEvent.ACTION_DROP:
+
+                        screenFrame.removeAllViews();
+                        screenFrame.setVisibility(View.INVISIBLE);
+
+                        if (fromIndex == toIndex) return true;
+
+//                        // viewがよけてしまうのでこれは呼ばれない
+//
+//                        cellDragged.setAlpha(1f);
+//
+//
+//
+//                        queueListView.removeView(cellDragged);
+//                        queueListView.addView(cellDragged, toIndex);
+//                        queueListView.requestLayout();
+//
+//                        File file = queueList.get(fromIndex);
+//                        queueList.remove(fromIndex);
+//                        queueList.add(toIndex, file);
+
+                        Log.i(SoundFileListCell.class.getSimpleName(), "Drag dropped! into " + toIndex);
+
+                        return true;
+
+                    case DragEvent.ACTION_DRAG_ENDED:
+
+                        screenFrame.removeAllViews();
+                        screenFrame.setVisibility(View.INVISIBLE);
+
+//                        ObjectAnimator animator1 = ObjectAnimator.ofFloat(toCell, "translationY", target, 0);
+//                        animator1.setDuration(300);
+//                        animator1.start();
+
+
+
+
+                        Log.i(SoundFileListCell.class.getSimpleName(), "Drag ended!");
+
+                        return true;
+                }
+                return true;
+            }
+        });
+
+        return cell;
+    }
+
+    private int getIndexOfCell(SoundFileListCell cell) {
+
+        for ( int i = 0 ; i < queueListView.getChildCount() ; i++ ) {
+
+            if (queueListView.getChildAt(i).equals(cell)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private Bitmap getBitmapFromView(View view) {
+        //Define a bitmap with the same size as the view
+        Bitmap returnedBitmap = Bitmap.createBitmap(view.getWidth(), view.getHeight() ,Bitmap.Config.ARGB_8888);
+        //Bind a canvas to it
+        Canvas canvas = new Canvas(returnedBitmap);
+        //Get the view's background
+        Drawable bgDrawable =view.getBackground();
+//        if (bgDrawable!=null)
+        //has background drawable, then draw it on the canvas
+//            bgDrawable.draw(canvas);
+//        else
+        //does not have background drawable, then draw white background on the canvas
+//            canvas.drawColor(Color.WHITE);
+        // draw the view on the canvas
+        view.draw(canvas);
+        Paint paint = new Paint();
+        paint.setColor(Color.WHITE);
+        paint.setStrokeWidth(0);
+        canvas.drawLine(0, 0, canvas.getWidth(), 0, paint);
+        canvas.drawLine(0, canvas.getHeight(), canvas.getWidth(), canvas.getHeight(), paint );
+        //return the bitmap
+        return returnedBitmap;
+    }
+
+    private ArrayList<CellShadow> cellShadows;
+    private void reflectOnScreen(int draggedIndex) {
+
+        cellShadows = new ArrayList<>();
+
+        int[] scrollTopLeft = {0, 0};
+        scrollView.getLocationOnScreen(scrollTopLeft);
+
+        for (int i = 0 ; i < queueListView.getChildCount() ; i++ ) {
+
+            // 自分の画像は射影しない
+            if (i != draggedIndex) {
+
+                View view = queueListView.getChildAt(i);
+
+                int[] cellTopLeft = {0, 0};
+                view.getLocationOnScreen(cellTopLeft);
+
+                CellShadow shadow = new CellShadow(i, view);
+
+                FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(shadow.width, shadow.height);
+                params.leftMargin = 0;
+                params.topMargin = cellTopLeft[1] - scrollTopLeft[1];
+                // FrameLayoutのmarginはgravityがセットされないと反応しない
+                params.gravity = Gravity.TOP;
+
+                shadow.setLayoutParams(params);
+
+                screenFrame.addView(shadow);
+                cellShadows.add(shadow);
+
+                Log.i(SoundFileListCell.class.getSimpleName(), "index " + i + " added! x = " + params.leftMargin + ", y = " + params.topMargin );
+
+            }
+
+        }
+
+    }
+
+    private CellShadow getCellShadowByIndex(int index) {
+        for (CellShadow cellShadow : cellShadows) {
+            if (cellShadow.index == index) {
+                return cellShadow;
+            }
+        }
+        return null;
+    }
+
+    class CellShadow  extends ImageView{
+        int index, width, height;
+
+        public CellShadow(int index, View view) {
+            super(MainActivity.this);
+            this.index = index;
+
+            Bitmap bitmap = getBitmapFromView(view);
+            width = bitmap.getWidth();
+            height = bitmap.getHeight();
+
+            setImageBitmap(bitmap);
+        }
+
+        public CellShadow(Context context, AttributeSet attrs, int index) {
+            super(context, attrs);
+            this.index = index;
+        }
+
 
     }
 }
