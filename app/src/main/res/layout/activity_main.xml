@@ -5,7 +5,7 @@
     android:id="@+id/activity_main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="net.c_kogyo.singlesongplayer.MainActivity"
+    tools:context="net.c_kogyo.singlesongplayer.activities.MainActivity"
     xmlns:ads="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical">
     
@@ -80,7 +80,7 @@
                     android:layout_height="match_parent"
                     android:id="@+id/scroll_view">
 
-                    <view.CollapseFileTreeView
+                    <net.c_kogyo.singlesongplayer.view.CollapseFileTreeView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:id="@+id/file_view"/>
