@@ -3,8 +3,6 @@ package net.c_kogyo.singlesongplayer;
 import android.Manifest;
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
-import android.content.ClipData;
-import android.content.ClipDescription;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -17,7 +15,6 @@ import android.graphics.drawable.Drawable;
 import android.os.Environment;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.AttributeSet;
@@ -30,8 +27,6 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ListView;
-import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 
 import com.google.android.gms.ads.AdRequest;
@@ -358,8 +353,8 @@ public class MainActivity extends AppCompatActivity {
                     return true;
                 }
 
-                SoundFileListCell toCell = (SoundFileListCell) view;
-                int toIndex = getIndexOfCell(toCell);
+                SoundFileListCell currentCell = (SoundFileListCell) view;
+                int currentIndex = getIndexOfCell(currentCell);
                 int fromIndex = getIndexOfCell(cellDragged);
 
                 //ドラッグが入ってきたとき上下どちらに退避するか
@@ -368,7 +363,7 @@ public class MainActivity extends AppCompatActivity {
 
                     case DragEvent.ACTION_DRAG_ENTERED:
 
-                        if (fromIndex == toIndex) return true;
+                        if (fromIndex == currentIndex) return true;
 
                         // ドラッグが入ってきました。
 
@@ -381,29 +376,39 @@ public class MainActivity extends AppCompatActivity {
 //
 //                        toCell.setAlpha(0.2f);
 
-                        Log.i(SoundFileListCell.class.getSimpleName(), "Drag in! to " + toIndex);
+                        Log.i(SoundFileListCell.class.getSimpleName(), "Drag in! to " + currentIndex);
 
-                        if (fromIndex > toIndex) {
+                        if (fromIndex > currentIndex) {
                             //上に向かってドラッグしたということ
+                            // 下に向かって退避する
 
-                            for (int i = fromIndex - 1  ; i >= toIndex; i-- ) {
+                            for (int i = fromIndex - 1  ; i >= currentIndex; i-- ) {
 
                                 CellShadow cellShadow = getCellShadowByIndex(i);
-                                ObjectAnimator animator0 = ObjectAnimator.ofFloat(cellShadow, "translationY", 0, cellHeight);
-                                animator0.setDuration(300);
-                                animator0.start();
+
+                                if (cellShadow != null) {
+                                    cellShadow.move = CellShadowMove.DOWN_MOVE;
+                                    ObjectAnimator animator0 = ObjectAnimator.ofFloat(cellShadow, "translationY", 0, cellHeight);
+                                    animator0.setDuration(300);
+                                    animator0.start();
+                                }
 
                             }
 
                         } else {
                             // 下に向かってドラッグしたということ
+                            // 上に向かって退避する
 
-                            for (int i = fromIndex + 1  ; i <= toIndex; i++ ) {
+                            for (int i = fromIndex + 1  ; i <= currentIndex; i++ ) {
 
                                 CellShadow cellShadow = getCellShadowByIndex(i);
-                                ObjectAnimator animator0 = ObjectAnimator.ofFloat(cellShadow, "translationY", 0, -cellHeight);
-                                animator0.setDuration(300);
-                                animator0.start();
+
+                                if (cellShadow != null) {
+                                    cellShadow.move = CellShadowMove.UP_MOVE;
+                                    ObjectAnimator animator0 = ObjectAnimator.ofFloat(cellShadow, "translationY", 0, -cellHeight);
+                                    animator0.setDuration(300);
+                                    animator0.start();
+                                }
 
                             }
                         }
@@ -414,6 +419,23 @@ public class MainActivity extends AppCompatActivity {
 
                     case DragEvent.ACTION_DRAG_EXITED:
 
+                        Log.i(SoundFileListCell.class.getSimpleName(), "Drag exited! of " + currentIndex);
+                        // 元位置に復帰するアニメーション
+
+                        CellShadow shadow = getCellShadowByIndex(currentIndex);
+
+                        if (shadow != null) {
+                            int origin = cellHeight;
+                            if (shadow.move == CellShadowMove.UP_MOVE) {
+                                origin = -cellHeight;
+                            }
+
+                            ObjectAnimator animator0 = ObjectAnimator.ofFloat(shadow, "translationY", origin, 0);
+                            animator0.setDuration(300);
+                            animator0.start();
+                        }
+
+
                         return false;
 
                     case DragEvent.ACTION_DROP:
@@ -421,7 +443,7 @@ public class MainActivity extends AppCompatActivity {
                         screenFrame.removeAllViews();
                         screenFrame.setVisibility(View.INVISIBLE);
 
-                        if (fromIndex == toIndex) return true;
+                        if (fromIndex == currentIndex) return true;
 
 //                        // viewがよけてしまうのでこれは呼ばれない
 //
@@ -437,7 +459,7 @@ public class MainActivity extends AppCompatActivity {
 //                        queueList.remove(fromIndex);
 //                        queueList.add(toIndex, file);
 
-                        Log.i(SoundFileListCell.class.getSimpleName(), "Drag dropped! into " + toIndex);
+                        Log.i(SoundFileListCell.class.getSimpleName(), "Drag dropped! into " + currentIndex);
 
                         return true;
 
@@ -547,12 +569,22 @@ public class MainActivity extends AppCompatActivity {
         return null;
     }
 
+    enum CellShadowMove{
+
+        UP_MOVE,
+        STAY,
+        DOWN_MOVE,
+    }
+
     class CellShadow  extends ImageView{
+
+        CellShadowMove move;
         int index, width, height;
 
         public CellShadow(int index, View view) {
             super(MainActivity.this);
             this.index = index;
+            this.move = CellShadowMove.STAY;
 
             Bitmap bitmap = getBitmapFromView(view);
             width = bitmap.getWidth();
