@@ -269,22 +269,15 @@ public class SoundFileListCell extends LinearLayout {
         });
     }
 
-
     private void initForTouch() {
 
 
 
     }
 
-
-
-
     public File getFile() {
         return mFile;
     }
-
-
-
 
     public interface PostCompressListener {
         void postCompress(SoundFileListCell cell);
