@@ -3,10 +3,14 @@ package net.c_kogyo.singlesongplayer.dialog;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
 import android.os.Bundle;
+import android.support.v4.content.LocalBroadcastManager;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -26,6 +30,15 @@ import java.io.File;
 
 public class SongPlayDialog extends DialogFragment {
 
+    public static final String TRACK_DURATION = SongPlayService.class.getName() + "track_duration";
+    public static final String TRACK_PROGRESS = SongPlayService.class.getName() + "track_progress";
+
+    public static final String ACTION_PLAY_OR_PAUSE = SongPlayService.class.getName() + "_action_play_or_pause";
+    public static final String ACTION_STOP          = SongPlayService.class.getName() + "_action_stop";
+    public static final String ACTION_FADE_IN_OUT   = SongPlayService.class.getName() + "action_fade_in_out";
+
+    public static final String PROGRESS_CHANGED = SongPlayService.class.getName() + "progress_changed";
+
     public static SongPlayDialog newInstance(String filePath) {
 
         Bundle args = new Bundle();
@@ -37,6 +50,8 @@ public class SongPlayDialog extends DialogFragment {
         return fragment;
     }
 
+    private LocalBroadcastManager broadcastManager;
+    private BroadcastReceiver receiver;
     private MediaMetadataRetriever retriever;
     private View view;
     @Override
@@ -44,6 +59,14 @@ public class SongPlayDialog extends DialogFragment {
 
         String filePath = getArguments().getString(SongPlayService.FILE_PATH);
         if (filePath == null) return null;
+
+        broadcastManager = LocalBroadcastManager.getInstance(getActivity());
+        receiver = new BroadcastReceiver(){
+            @Override
+            public void onReceive(Context context, Intent intent) {
+
+            }
+        };
 
         retriever = new MediaMetadataRetriever();
         retriever.setDataSource(filePath);
@@ -190,7 +213,10 @@ public class SongPlayDialog extends DialogFragment {
                         return true;
                     case MotionEvent.ACTION_UP:
 
+                        broadcastManager.sendBroadcast(new Intent(ACTION_STOP));
                         view.setAlpha(1f);
+
+                        dismiss();
 
                         return true;
                 }

@@ -50,16 +50,7 @@ import net.c_kogyo.singlesongplayer.view.SoundFileListCell;
 
 public class MainActivity extends AppCompatActivity {
 
-    public static final String SONG_FILE_PATH = "song_file_path";
-
-    public static final String TRACK_DURATION = "track_duration";
-    public static final String TRACK_PROGRESS = "track_progress";
-
-    public static final String PLAY_OR_PAUSE = "play_or_pause";
-    public static final String STOP_PLAY = "stop_play";
-    public static final String FADE_IN_OUT = "fade_in_out";
-
-    public static final String PROGRESS_CHANGED = "progress_changed";
+    public static final String SONG_FILE_PATH = MainActivity.class.getName() + "song_file_path";
 
     private ArrayList<File> queueList;
     private static boolean isForeground;
@@ -76,19 +67,17 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onReceive(Context context, Intent intent) {
 
-                switch (intent.getAction()) {
+                String action = intent.getAction();
 
-                    case SongPlayService.ACTION_PLAY_STARTED:
+                if (action.equals(SongPlayService.ACTION_PLAY_STARTED)) {
 
-                        String filePath = intent.getStringExtra(SongPlayService.FILE_PATH);
+                    String filePath = intent.getStringExtra(SongPlayService.FILE_PATH);
 
-                        SongPlayDialog dialog = SongPlayDialog.newInstance(filePath);
-                        dialog.setCancelable(false);
-                        dialog.show(getFragmentManager(), null);
-
-                        break;
-
+                    SongPlayDialog dialog = SongPlayDialog.newInstance(filePath);
+                    dialog.setCancelable(false);
+                    dialog.show(getFragmentManager(), null);
                 }
+
             }
         };
 
