@@ -35,6 +35,8 @@ public class SongPlayService extends Service{
     public static final String ACTION_PLAY_COMPLETED = SongPlayService.class.getSimpleName() + "_action_play_completed";
     public static final String ACTION_PLAY_STOPPED = SongPlayService.class.getSimpleName() + "_action_play_stopped";
     public static final String ACTION_PLAY_PAUSE_STATE_CHANGED = SongPlayService.class.getSimpleName() + "_action_play_pause_state_changed";
+    public static final String IS_PLAYING = SongPlayService.class.getCanonicalName() + "_is_playing";
+
     public static final String ACTION_FADING_STARTED = SongPlayService.class.getSimpleName() + "_action_fading_started";
     public static final String ACTION_FADING_REVERTED = SongPlayService.class.getSimpleName() + "_action_fading_reverted";
     public static final String ACTION_UPDATE_PROGRESS = SongPlayService.class.getSimpleName() + "_action_update_progress";
@@ -78,7 +80,20 @@ public class SongPlayService extends Service{
                         notificationManager.cancel(notifyId);
                         stopSelf();
                     }
+                } else if (action.equals(SongPlayDialog.ACTION_PLAY_PAUSE)) {
+
+                    if (mPlayer.isPlaying()) {
+                        mPlayer.pause();
+                    } else {
+                        mPlayer.start();
+                    }
+
+                    Intent playStateChangeIntent = new Intent(ACTION_PLAY_PAUSE_STATE_CHANGED);
+                    playStateChangeIntent.putExtra(IS_PLAYING, mPlayer.isPlaying());
+                    broadcastManager.sendBroadcast(playStateChangeIntent);
+
                 }
+
 
 //                switch (intent.getAction()) {
 //                    case MainActivity.PLAY_OR_PAUSE:
@@ -119,6 +134,7 @@ public class SongPlayService extends Service{
     public int onStartCommand(Intent intent, int flags, int startId) {
 
         broadcastManager.registerReceiver(receiver, new IntentFilter(SongPlayDialog.ACTION_STOP));
+        broadcastManager.registerReceiver(receiver, new IntentFilter(SongPlayDialog.ACTION_PLAY_PAUSE));
 
         // 現在のボリュームを追い続けるスレッド
         new Thread(new Runnable() {

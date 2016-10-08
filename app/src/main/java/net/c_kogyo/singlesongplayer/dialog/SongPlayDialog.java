@@ -6,6 +6,7 @@ import android.app.DialogFragment;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
@@ -33,7 +34,7 @@ public class SongPlayDialog extends DialogFragment {
     public static final String TRACK_DURATION = SongPlayService.class.getName() + "track_duration";
     public static final String TRACK_PROGRESS = SongPlayService.class.getName() + "track_progress";
 
-    public static final String ACTION_PLAY_OR_PAUSE = SongPlayService.class.getName() + "_action_play_or_pause";
+    public static final String ACTION_PLAY_PAUSE = SongPlayService.class.getName() + "_action_play_pause";
     public static final String ACTION_STOP          = SongPlayService.class.getName() + "_action_stop";
     public static final String ACTION_FADE_IN_OUT   = SongPlayService.class.getName() + "action_fade_in_out";
 
@@ -57,7 +58,7 @@ public class SongPlayDialog extends DialogFragment {
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
 
-        String filePath = getArguments().getString(SongPlayService.FILE_PATH);
+        final String filePath = getArguments().getString(SongPlayService.FILE_PATH);
         if (filePath == null) return null;
 
         broadcastManager = LocalBroadcastManager.getInstance(getActivity());
@@ -65,8 +66,19 @@ public class SongPlayDialog extends DialogFragment {
             @Override
             public void onReceive(Context context, Intent intent) {
 
+                String action = intent.getAction();
+
+                if (action.equals(SongPlayService.ACTION_PLAY_PAUSE_STATE_CHANGED)) {
+
+                    boolean isPlaying = intent.getBooleanExtra(SongPlayService.IS_PLAYING, false);
+                    updatePlayPauseButton(isPlaying);
+
+                }
+
             }
         };
+
+        broadcastManager.registerReceiver(receiver, new IntentFilter(SongPlayService.ACTION_PLAY_PAUSE_STATE_CHANGED));
 
         retriever = new MediaMetadataRetriever();
         retriever.setDataSource(filePath);
@@ -171,9 +183,10 @@ public class SongPlayDialog extends DialogFragment {
         });
     }
 
+    private Button playPauseButton;
     private void initPlayPauseButton() {
 
-        Button playPauseButton = (Button) view.findViewById(R.id.play_pause_button);
+        playPauseButton = (Button) view.findViewById(R.id.play_pause_button);
         playPauseButton.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
@@ -189,12 +202,26 @@ public class SongPlayDialog extends DialogFragment {
 
                         view.setAlpha(1f);
 
+                        broadcastManager.sendBroadcast(new Intent(ACTION_PLAY_PAUSE));
+
                         return true;
                 }
 
                 return false;
             }
         });
+    }
+
+    private void updatePlayPauseButton(boolean isPlaying) {
+
+        if (isPlaying) {
+
+            playPauseButton.setBackgroundResource(R.drawable.pause);
+
+        } else {
+
+            playPauseButton.setBackgroundResource(R.drawable.play);
+        }
     }
 
     private void initStopButton() {
