@@ -1,5 +1,8 @@
 package net.c_kogyo.singlesongplayer.dialog;
 
+import android.animation.Animator;
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
@@ -11,6 +14,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v4.content.LocalBroadcastManager;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -23,7 +27,8 @@ import android.widget.TextView;
 import net.c_kogyo.singlesongplayer.R;
 import net.c_kogyo.singlesongplayer.services.SongPlayService;
 
-import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by SeijiShii on 2016/10/07.
@@ -31,14 +36,14 @@ import java.io.File;
 
 public class SongPlayDialog extends DialogFragment {
 
-    public static final String TRACK_DURATION = SongPlayService.class.getName() + "track_duration";
-    public static final String TRACK_PROGRESS = SongPlayService.class.getName() + "track_progress";
+    public static final String TRACK_DURATION = SongPlayDialog.class.getName() + "track_duration";
+    public static final String TRACK_PROGRESS = SongPlayDialog.class.getName() + "track_progress";
 
-    public static final String ACTION_PLAY_PAUSE = SongPlayService.class.getName() + "_action_play_pause";
-    public static final String ACTION_STOP          = SongPlayService.class.getName() + "_action_stop";
-    public static final String ACTION_FADE_IN_OUT   = SongPlayService.class.getName() + "action_fade_in_out";
+    public static final String ACTION_PLAY_PAUSE    = SongPlayDialog.class.getName() + "_action_play_pause";
+    public static final String ACTION_STOP          = SongPlayDialog.class.getName() + "_action_stop";
+    public static final String ACTION_FADE_IN_OUT   = SongPlayDialog.class.getName() + "action_fade_in_out";
 
-    public static final String PROGRESS_CHANGED = SongPlayService.class.getName() + "progress_changed";
+    public static final String PROGRESS_CHANGED = SongPlayDialog.class.getName() + "progress_changed";
 
     public static SongPlayDialog newInstance(String filePath) {
 
@@ -73,12 +78,31 @@ public class SongPlayDialog extends DialogFragment {
                     boolean isPlaying = intent.getBooleanExtra(SongPlayService.IS_PLAYING, false);
                     updatePlayPauseButton(isPlaying);
 
+                } else if (action.equals(SongPlayService.ACTION_FADING_STARTED)) {
+
+                    isFadingOut = true;
+                    flashingFadeOutButton();
+
+                } else if (action.equals(SongPlayService.ACTION_FADING_REVERTED)) {
+
+                    isFadingOut = false;
+
+                } else if (action.equals(SongPlayService.ACTION_PLAY_STOPPED)) {
+
+                    dismiss();
+
                 }
 
             }
         };
 
-        broadcastManager.registerReceiver(receiver, new IntentFilter(SongPlayService.ACTION_PLAY_PAUSE_STATE_CHANGED));
+        IntentFilter intentFilter = new IntentFilter(SongPlayService.ACTION_PLAY_PAUSE_STATE_CHANGED);
+        intentFilter.addAction(SongPlayService.ACTION_FADING_STARTED);
+        intentFilter.addAction(SongPlayService.ACTION_FADING_REVERTED);
+        intentFilter.addAction(SongPlayService.ACTION_PLAY_STOPPED);
+        intentFilter.addAction(SongPlayService.ACTION_PLAY_COMPLETED);
+        intentFilter.addAction(SongPlayService.ACTION_UPDATE_PROGRESS);
+        broadcastManager.registerReceiver(receiver, intentFilter);
 
         retriever = new MediaMetadataRetriever();
         retriever.setDataSource(filePath);
@@ -157,9 +181,10 @@ public class SongPlayDialog extends DialogFragment {
 
     }
 
+    private Button fadeOutButton;
     private void initFadeOutButton() {
 
-        Button fadeOutButton = (Button) view.findViewById(R.id.fade_out_button);
+        fadeOutButton = (Button) view.findViewById(R.id.fade_out_button);
         fadeOutButton.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
@@ -175,12 +200,53 @@ public class SongPlayDialog extends DialogFragment {
 
                         view.setAlpha(1f);
 
+                        broadcastManager.sendBroadcast(new Intent(ACTION_FADE_IN_OUT));
+
                         return true;
                 }
 
                 return false;
             }
         });
+    }
+
+    private boolean isFadingOut;
+    private void flashingFadeOutButton() {
+
+        final Handler handler = new Handler();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+
+                handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        while (isFadingOut) {
+
+                            flashFadeOut();
+                        }
+                        fadeOutButton.setAlpha(1f);
+                    }
+                });
+            }
+        }).start();
+
+    }
+
+    private void flashFadeOut() {
+        List<Animator> animatorList = new ArrayList<>();
+
+        ObjectAnimator animator0 = ObjectAnimator.ofFloat(fadeOutButton, "alpha", 1f, 0f);
+        animator0.setDuration(500);
+
+        ObjectAnimator animator1 = ObjectAnimator.ofFloat(fadeOutButton, "alpha", 0f, 1f);
+        animator0.setDuration(500);
+
+        animatorList.add(animator0);
+        animatorList.add(animator1);
+
+        final AnimatorSet animatorSet = new AnimatorSet();
+        animatorSet.playSequentially(animatorList);
     }
 
     private Button playPauseButton;

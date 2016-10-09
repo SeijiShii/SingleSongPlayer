@@ -31,18 +31,18 @@ import static android.content.Intent.ACTION_DELETE;
 
 public class SongPlayService extends Service{
 
-    public static final String ACTION_PLAY_STARTED = SongPlayService.class.getSimpleName() + "_action_play_started";
-    public static final String ACTION_PLAY_COMPLETED = SongPlayService.class.getSimpleName() + "_action_play_completed";
-    public static final String ACTION_PLAY_STOPPED = SongPlayService.class.getSimpleName() + "_action_play_stopped";
-    public static final String ACTION_PLAY_PAUSE_STATE_CHANGED = SongPlayService.class.getSimpleName() + "_action_play_pause_state_changed";
+    public static final String ACTION_PLAY_STARTED = SongPlayService.class.getCanonicalName() + "_action_play_started";
+    public static final String ACTION_PLAY_COMPLETED = SongPlayService.class.getCanonicalName() + "_action_play_completed";
+    public static final String ACTION_PLAY_STOPPED = SongPlayService.class.getCanonicalName() + "_action_play_stopped";
+    public static final String ACTION_PLAY_PAUSE_STATE_CHANGED = SongPlayService.class.getCanonicalName() + "_action_play_pause_state_changed";
     public static final String IS_PLAYING = SongPlayService.class.getCanonicalName() + "_is_playing";
 
-    public static final String ACTION_FADING_STARTED = SongPlayService.class.getSimpleName() + "_action_fading_started";
-    public static final String ACTION_FADING_REVERTED = SongPlayService.class.getSimpleName() + "_action_fading_reverted";
-    public static final String ACTION_UPDATE_PROGRESS = SongPlayService.class.getSimpleName() + "_action_update_progress";
+    public static final String ACTION_FADING_STARTED = SongPlayService.class.getCanonicalName() + "_action_fading_started";
+    public static final String ACTION_FADING_REVERTED = SongPlayService.class.getCanonicalName() + "_action_fading_reverted";
+    public static final String ACTION_UPDATE_PROGRESS = SongPlayService.class.getCanonicalName() + "_action_update_progress";
 
-    public static final String FILE_PATH = SongPlayService.class.getSimpleName() + "_file_path";
-    public static final String PROGRESS = SongPlayService.class.getSimpleName() + "_progress";
+    public static final String FILE_PATH = SongPlayService.class.getCanonicalName() + "_file_path";
+    public static final String PROGRESS = SongPlayService.class.getCanonicalName() + "_progress";
 
 
     private boolean isFadingOut;
@@ -66,7 +66,7 @@ public class SongPlayService extends Service{
 
         mContext = getApplicationContext();
 
-        broadcastManager = LocalBroadcastManager.getInstance(getApplicationContext());
+        broadcastManager = LocalBroadcastManager.getInstance(this);
 
         receiver = new BroadcastReceiver() {
             @Override
@@ -77,6 +77,7 @@ public class SongPlayService extends Service{
 
                     if (mPlayer.isPlaying()) {
                         mPlayer.stop();
+                        muteOtherStream(false);
                         notificationManager.cancel(notifyId);
                         stopSelf();
                     }
@@ -84,44 +85,22 @@ public class SongPlayService extends Service{
 
                     if (mPlayer.isPlaying()) {
                         mPlayer.pause();
+                        muteOtherStream(false);
                     } else {
                         mPlayer.start();
+                        muteOtherStream(true);
                     }
 
                     Intent playStateChangeIntent = new Intent(ACTION_PLAY_PAUSE_STATE_CHANGED);
                     playStateChangeIntent.putExtra(IS_PLAYING, mPlayer.isPlaying());
                     broadcastManager.sendBroadcast(playStateChangeIntent);
 
+                } else if (action.equals(SongPlayDialog.ACTION_FADE_IN_OUT) ) {
+
+                    isFadingOut = !isFadingOut;
+                    fadeOutIn();
+
                 }
-
-
-//                switch (intent.getAction()) {
-//                    case MainActivity.PLAY_OR_PAUSE:
-//
-//                        if (mPlayer.isPlaying()) {
-//                            mPlayer.stop();
-//                        } else {
-//                            mPlayer.start();
-//                        }
-//
-//                        break;
-//                    case MainActivity.STOP_PLAY:
-//
-//                        if (mPlayer.isPlaying()) {
-//                            mPlayer.stop();
-//                        }
-//
-//                        break;
-//                    case MainActivity.FADE_IN_OUT:
-//
-//                        isFadingOut = !isFadingOut;
-//
-//
-//                        break;
-//                    case MainActivity.PROGRESS_CHANGED:
-//
-//                        break;
-//                }
             }
         };
     }
@@ -135,6 +114,7 @@ public class SongPlayService extends Service{
 
         broadcastManager.registerReceiver(receiver, new IntentFilter(SongPlayDialog.ACTION_STOP));
         broadcastManager.registerReceiver(receiver, new IntentFilter(SongPlayDialog.ACTION_PLAY_PAUSE));
+        broadcastManager.registerReceiver(receiver, new IntentFilter(SongPlayDialog.ACTION_FADE_IN_OUT));
 
         // 現在のボリュームを追い続けるスレッド
         new Thread(new Runnable() {
@@ -289,30 +269,37 @@ public class SongPlayService extends Service{
 
         if (isFadingOut) {
 
-            fadeOutRunnable = new FadeOutRunnable();
+            fadeOutRunnable = new FadeOutRunnable(this);
             new Thread(fadeOutRunnable).start();
 
             Intent fadeStartIntent = new Intent(ACTION_FADING_STARTED);
-            LocalBroadcastManager.getInstance(mContext).sendBroadcast(fadeStartIntent);
+            broadcastManager.sendBroadcast(fadeStartIntent);
 
         } else {
 
-            Intent fadeRevertIntent = new Intent(ACTION_FADING_REVERTED);
-            LocalBroadcastManager.getInstance(mContext).sendBroadcast(fadeRevertIntent);
+
         }
 
     }
 
     class FadeOutRunnable implements Runnable {
 
+        Context mContext;
+
+        FadeOutRunnable(Context context) {
+            mContext = context;
+        }
+
         @Override
         public void run() {
 
+            float changingVolume = currentVolume;
+            float volumeStep = currentVolume / 40f;
+
             int secCounter = 0;
             AudioManager manager = (AudioManager) getSystemService(AUDIO_SERVICE);
-            int volumeStep = (int)(currentVolume / 50);
 
-            while (secCounter > 0 || secCounter < 5000) {
+            while (true) {
 
                 try {
                     Thread.sleep(100);
@@ -322,12 +309,30 @@ public class SongPlayService extends Service{
 
                 if (isFadingOut) {
                     secCounter += 100;
-                    manager.adjustStreamVolume(AudioManager.STREAM_MUSIC, -volumeStep, 0);
+                    changingVolume -= volumeStep;
                 } else {
                     secCounter -= 100;
-                    manager.adjustStreamVolume(AudioManager.STREAM_MUSIC, volumeStep, 0);
+                    changingVolume += volumeStep;
                 }
 
+                mPlayer.setVolume(changingVolume, changingVolume);
+
+                if (secCounter > 5000 || manager.getStreamVolume(AudioManager.STREAM_MUSIC) < 0) {
+
+                    mPlayer.stop();
+                    muteOtherStream(false);
+
+                    Intent stopIntent = new Intent(ACTION_PLAY_STOPPED);
+                    // sendBroadcastSyncにしないと消えてなくなってしまうらしい
+                    LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcastSync(stopIntent);
+                    stopSelf();
+                    break;
+                } else if (secCounter < 0) {
+
+                    Intent fadeRevertIntent = new Intent(ACTION_FADING_REVERTED);
+                    broadcastManager.sendBroadcast(fadeRevertIntent);
+                    break;
+                }
             }
 
         }
