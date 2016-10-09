@@ -26,6 +26,7 @@ import android.util.Log;
 import android.view.Display;
 import android.view.DragEvent;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -43,6 +44,7 @@ import net.c_kogyo.singlesongplayer.R;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Set;
 
 import net.c_kogyo.singlesongplayer.dialog.SongPlayDialog;
 import net.c_kogyo.singlesongplayer.services.SongPlayService;
@@ -109,6 +111,7 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         loadQueueList();
         setQueueListView();
+        loadHistoryFiles();
 
         IntentFilter intentFilter = new IntentFilter(SongPlayService.ACTION_PLAY_STARTED);
         intentFilter.addAction(SongPlayService.ACTION_PLAY_STOPPED);
@@ -209,6 +212,20 @@ public class MainActivity extends AppCompatActivity {
 
         // 初期は見えない
         overlay.setAlpha(0f);
+        overlay.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View view, MotionEvent motionEvent) {
+
+                if (isDrawerOpen) {
+                    if (motionEvent.getAction() == MotionEvent.ACTION_DOWN) {
+                        animateDrawer();
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+        });
 
     }
 
@@ -244,8 +261,6 @@ public class MainActivity extends AppCompatActivity {
             originAlpha = ALPHA_DARK;
             targetAlpha = 0f;
 
-            overlay.setOnClickListener(null);
-
         } else {
             origin = drawerStride;
             target = 0;
@@ -253,12 +268,6 @@ public class MainActivity extends AppCompatActivity {
             originAlpha = 0f;
             targetAlpha = ALPHA_DARK;
 
-            overlay.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    animateDrawer();
-                }
-            });
         }
 
         ValueAnimator animator = ValueAnimator.ofInt(origin, target);
@@ -696,22 +705,9 @@ public class MainActivity extends AppCompatActivity {
     private void initHistoryList() {
 
         historyList = (LinearLayout) findViewById(R.id.history_list);
-        historyList.removeAllViews();
+
 
         loadHistoryFiles();
-
-        for (File file : historyFiles) {
-
-            SoundFileCell cell = new SoundFileCell(this, file, new SoundFileCell.OnFileClickListener() {
-                @Override
-                public void onClick(File file) {
-                    animateDrawer();
-                    addSoundFile(file);
-                }
-            });
-
-            historyList.addView(cell);
-        }
 
     }
 
@@ -754,12 +750,27 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences prefs = getSharedPreferences(SSP_PREF_TAG, MODE_PRIVATE);
         historyFiles = new ArrayList<>();
 
-        HashSet<String> set = new HashSet<>();
-        prefs.getStringSet(HISTORY_FILES_TAG, set);
+        Set<String> set = new HashSet<>();
+        set = prefs.getStringSet(HISTORY_FILES_TAG, set);
 
         for (String path : set) {
 
             historyFiles.add(new File(path));
+        }
+
+        historyList.removeAllViews();
+
+        for (File file : historyFiles) {
+
+            SoundFileCell cell = new SoundFileCell(this, file, new SoundFileCell.OnFileClickListener() {
+                @Override
+                public void onClick(File file) {
+                    animateDrawer();
+                    addSoundFile(file);
+                }
+            });
+
+            historyList.addView(cell);
         }
     }
 
