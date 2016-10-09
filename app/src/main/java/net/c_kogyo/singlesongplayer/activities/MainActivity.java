@@ -187,9 +187,11 @@ public class MainActivity extends AppCompatActivity {
     private int drawerStride;
     private LinearLayout drawer;
     private ViewGroup.MarginLayoutParams drawerParams;
+    private View overlay;
     private void initDrawer() {
 
         drawer = (LinearLayout) findViewById(R.id.drawer);
+        overlay = findViewById(R.id.overlay);
 
         initDirTab();
         initHistoryList();
@@ -205,9 +207,13 @@ public class MainActivity extends AppCompatActivity {
         drawer.setLayoutParams(drawerParams);
         drawer.requestLayout();
 
+        // 初期は見えない
+        overlay.setAlpha(0f);
+
     }
 
     private ImageView dirTab;
+
     private int tabWidth;
     private boolean isDrawerOpen = false;
     private void initDirTab() {
@@ -227,12 +233,32 @@ public class MainActivity extends AppCompatActivity {
     private void animateDrawer() {
 
         int origin, target;
+        float originAlpha, targetAlpha;
+
+        final float ALPHA_DARK = 0.5f;
+
         if (isDrawerOpen) {
             origin = 0;
             target = drawerStride;
+
+            originAlpha = ALPHA_DARK;
+            targetAlpha = 0f;
+
+            overlay.setOnClickListener(null);
+
         } else {
             origin = drawerStride;
             target = 0;
+
+            originAlpha = 0f;
+            targetAlpha = ALPHA_DARK;
+
+            overlay.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    animateDrawer();
+                }
+            });
         }
 
         ValueAnimator animator = ValueAnimator.ofInt(origin, target);
@@ -248,6 +274,17 @@ public class MainActivity extends AppCompatActivity {
         });
         animator.setDuration(300);
         animator.start();
+
+        ValueAnimator overlayAnimator = ValueAnimator.ofFloat(originAlpha, targetAlpha);
+        overlayAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator valueAnimator) {
+                overlay.setAlpha((float) valueAnimator.getAnimatedValue());
+                overlay.invalidate();
+            }
+        });
+        overlayAnimator.setDuration(300);
+        overlayAnimator.start();
 
         isDrawerOpen = !isDrawerOpen;
 
