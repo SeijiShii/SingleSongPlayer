@@ -76,8 +76,9 @@ public class MainActivity extends AppCompatActivity {
                 if (action.equals(SongPlayService.ACTION_PLAY_STARTED)) {
 
                     String filePath = intent.getStringExtra(SongPlayService.FILE_PATH);
+                    int duration = intent.getIntExtra(SongPlayService.DURATION, 0);
 
-                    dialog = SongPlayDialog.newInstance(filePath);
+                    dialog = SongPlayDialog.newInstance(filePath, duration);
                     dialog.setCancelable(false);
                     dialog.show(getFragmentManager(), null);
                 } else if (action.equals(SongPlayService.ACTION_PLAY_STOPPED)) {

@@ -45,11 +45,12 @@ public class SongPlayDialog extends DialogFragment {
 
     public static final String PROGRESS_CHANGED = SongPlayDialog.class.getName() + "progress_changed";
 
-    public static SongPlayDialog newInstance(String filePath) {
+    public static SongPlayDialog newInstance(String filePath, int duration) {
 
         Bundle args = new Bundle();
 
         args.putString(SongPlayService.FILE_PATH, filePath);
+        args.putInt(SongPlayService.DURATION, duration);
 
         SongPlayDialog fragment = new SongPlayDialog();
         fragment.setArguments(args);
@@ -65,6 +66,9 @@ public class SongPlayDialog extends DialogFragment {
 
         final String filePath = getArguments().getString(SongPlayService.FILE_PATH);
         if (filePath == null) return null;
+
+        int duration = getArguments().getInt(SongPlayService.DURATION);
+        durationString = getTimeString(duration);
 
         broadcastManager = LocalBroadcastManager.getInstance(getActivity());
         receiver = new BroadcastReceiver(){
@@ -89,6 +93,10 @@ public class SongPlayDialog extends DialogFragment {
                 } else if (action.equals(SongPlayService.ACTION_PLAY_STOPPED)) {
 
                     isFading = false;
+                } else if (action.equals(SongPlayService.ACTION_UPDATE_PROGRESS)) {
+
+                    int currentPosition = intent.getIntExtra(SongPlayService.CURRENT_POSITION, 0);
+                    updateDurationText(currentPosition);
                 }
 
             }
@@ -113,6 +121,7 @@ public class SongPlayDialog extends DialogFragment {
         initImage();
         initTitleText();
         initAlbumText();
+        initDurationText();
         initSeekBar();
         initFadeOutButton();
         initPlayPauseButton();
@@ -154,6 +163,20 @@ public class SongPlayDialog extends DialogFragment {
         String albumString = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM);
 
         albumText.setText(albumString);
+    }
+
+    private String durationString;
+    private TextView durationText;
+    private void initDurationText() {
+        durationText = (TextView) view.findViewById(R.id.duration_text);
+        updateDurationText(0);
+    }
+
+    private void updateDurationText(int currentPosition) {
+
+        String string = getTimeString(currentPosition) + " / " + durationString;
+        durationText.setText(string);
+
     }
 
     private SeekBar seekBar;
@@ -388,5 +411,34 @@ public class SongPlayDialog extends DialogFragment {
                 return false;
             }
         });
+    }
+
+    private String getTimeString(int time){
+
+        final int second = 1000;
+        final int minute = second * 60;
+        final int hour = minute * 60;
+
+        StringBuilder builder = new StringBuilder();
+
+        if (time / hour > 0) {
+
+            builder.append(String.valueOf(time / hour)).append(":");
+        }
+        time = time - time / hour * hour;
+
+        if (time / minute >= 10) {
+            builder.append(String.valueOf(time / minute)).append(":");
+        } else if (time / minute > 0) {
+            builder.append("0").append(String.valueOf(time / minute)).append(":");
+        } else {
+            builder.append("0:");
+        }
+        time = time - time / minute * minute;
+        time = time / second;
+
+        builder.append(String.format("%02d", time));
+
+        return builder.toString();
     }
 }

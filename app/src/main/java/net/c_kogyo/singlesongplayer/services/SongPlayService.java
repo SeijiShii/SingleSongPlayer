@@ -41,8 +41,9 @@ public class SongPlayService extends Service{
     public static final String ACTION_FADING_REVERTED = SongPlayService.class.getCanonicalName() + "_action_fading_reverted";
     public static final String ACTION_UPDATE_PROGRESS = SongPlayService.class.getCanonicalName() + "_action_update_progress";
 
-    public static final String FILE_PATH = SongPlayService.class.getCanonicalName() + "_file_path";
-    public static final String PROGRESS = SongPlayService.class.getCanonicalName() + "_progress";
+    public static final String FILE_PATH        = SongPlayService.class.getCanonicalName() + "_file_path";
+    public static final String DURATION         = SongPlayService.class.getCanonicalName() + "_duration";
+    public static final String CURRENT_POSITION = SongPlayService.class.getCanonicalName() + "_current_position";
 
 
     private boolean isFadingOut;
@@ -109,32 +110,15 @@ public class SongPlayService extends Service{
     private MediaPlayer mPlayer;
     private float currentVolume;
 
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
-        broadcastManager.registerReceiver(receiver, new IntentFilter(SongPlayDialog.ACTION_STOP));
-        broadcastManager.registerReceiver(receiver, new IntentFilter(SongPlayDialog.ACTION_PLAY_PAUSE));
-        broadcastManager.registerReceiver(receiver, new IntentFilter(SongPlayDialog.ACTION_FADE_IN_OUT));
-
-        // 現在のボリュームを追い続けるスレッド
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-
-                do {
-                    AudioManager manager = (AudioManager) mContext.getSystemService(AUDIO_SERVICE);
-                    int currentVolumeInt = manager.getStreamVolume(AudioManager.STREAM_MUSIC);
-                    int maxVolumeInt = manager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
-                    currentVolume = (float) currentVolumeInt / (float) maxVolumeInt;
-
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }while (true);
-            }
-        }).start();
+        IntentFilter intentFilter = new IntentFilter(SongPlayDialog.ACTION_STOP);
+        intentFilter.addAction(SongPlayDialog.ACTION_PLAY_PAUSE);
+        intentFilter.addAction(SongPlayDialog.ACTION_FADE_IN_OUT);
+        intentFilter.addAction(SongPlayDialog.PROGRESS_CHANGED);
+        broadcastManager.registerReceiver(receiver, intentFilter);
 
         String filePath = intent.getStringExtra(MainActivity.SONG_FILE_PATH);
 
@@ -144,7 +128,6 @@ public class SongPlayService extends Service{
 
         if (mPlayer == null) {
             mPlayer = MediaPlayer.create(mContext, Uri.fromFile(mFile));
-            mPlayer.setVolume(currentVolume, currentVolume);
             mPlayer.start();
             muteOtherStream(true);
 
@@ -152,6 +135,7 @@ public class SongPlayService extends Service{
 
                 Intent playStartIntent = new Intent(ACTION_PLAY_STARTED);
                 playStartIntent.putExtra(FILE_PATH, mFile.getAbsolutePath());
+                playStartIntent.putExtra(DURATION, mPlayer.getDuration());
                 LocalBroadcastManager.getInstance(mContext).sendBroadcast(playStartIntent);
                 createNotification();
             }
@@ -162,13 +146,42 @@ public class SongPlayService extends Service{
 
                     LocalBroadcastManager.getInstance(mContext).sendBroadcast(new Intent(ACTION_PLAY_COMPLETED));
                     stopSelf();
+                    muteOtherStream(false);
 
                 }
             });
+
+            // 現在のボリュームを追い続けるスレッド
+            // プログレスをアップデート
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+
+                    while (mPlayer.isPlaying()) {
+                        AudioManager manager = (AudioManager) mContext.getSystemService(AUDIO_SERVICE);
+                        int currentVolumeInt = manager.getStreamVolume(AudioManager.STREAM_MUSIC);
+                        int maxVolumeInt = manager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+                        currentVolume = (float) currentVolumeInt / (float) maxVolumeInt;
+
+                        // プログレスをアップデート
+
+                        int duration = mPlayer.getDuration();
+                        int currentPosition = mPlayer.getCurrentPosition();
+
+                        Intent progressIntent = new Intent(ACTION_UPDATE_PROGRESS);
+                        progressIntent.putExtra(DURATION, duration);
+                        progressIntent.putExtra(CURRENT_POSITION, currentPosition);
+                        broadcastManager.sendBroadcast(progressIntent);
+
+                        try {
+                            Thread.sleep(300);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }).start();
         }
-
-
-
 
         return START_STICKY;
     }
