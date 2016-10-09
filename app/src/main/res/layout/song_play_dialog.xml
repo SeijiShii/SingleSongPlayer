@@ -70,12 +70,12 @@
         <RelativeLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="1">
+            android:layout_weight="1"
+            android:id="@+id/fade_out_button">
 
-            <Button
+            <ImageView
                 android:layout_width="25dp"
                 android:layout_height="25dp"
-                android:id="@+id/fade_out_button"
                 android:background="@drawable/fade_out"
                 android:layout_centerInParent="true"/>
 
@@ -84,12 +84,12 @@
         <RelativeLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="1">
+            android:layout_weight="1"
+            android:id="@+id/play_pause_button">
 
-            <Button
+            <ImageView
                 android:layout_width="25dp"
                 android:layout_height="25dp"
-                android:id="@+id/play_pause_button"
                 android:background="@drawable/pause"
                 android:layout_centerInParent="true"/>
 
@@ -98,12 +98,12 @@
         <RelativeLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="1">
+            android:layout_weight="1"
+            android:id="@+id/stop_button">
 
             <Button
                 android:layout_width="20dp"
                 android:layout_height="20dp"
-                android:id="@+id/stop_button"
                 android:background="@drawable/stop"
                 android:layout_centerInParent="true"/>
 

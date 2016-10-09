@@ -3,6 +3,8 @@ package net.c_kogyo.singlesongplayer.activities;
 import android.Manifest;
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
+import android.app.Dialog;
+import android.app.DialogFragment;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -57,6 +59,8 @@ public class MainActivity extends AppCompatActivity {
     private LocalBroadcastManager broadcastManager;
     private BroadcastReceiver receiver;
 
+    private SongPlayDialog dialog;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -73,9 +77,13 @@ public class MainActivity extends AppCompatActivity {
 
                     String filePath = intent.getStringExtra(SongPlayService.FILE_PATH);
 
-                    SongPlayDialog dialog = SongPlayDialog.newInstance(filePath);
+                    dialog = SongPlayDialog.newInstance(filePath);
                     dialog.setCancelable(false);
                     dialog.show(getFragmentManager(), null);
+                } else if (action.equals(SongPlayService.ACTION_PLAY_STOPPED)) {
+
+                    dialog.setCancelable(true);
+                    dialog.dismiss();
                 }
 
             }
@@ -101,7 +109,9 @@ public class MainActivity extends AppCompatActivity {
         loadQueueList();
         setQueueListView();
 
-        broadcastManager.registerReceiver(receiver, new IntentFilter(SongPlayService.ACTION_PLAY_STARTED));
+        IntentFilter intentFilter = new IntentFilter(SongPlayService.ACTION_PLAY_STARTED);
+        intentFilter.addAction(SongPlayService.ACTION_PLAY_STOPPED);
+        broadcastManager.registerReceiver(receiver, intentFilter);
 
     }
 

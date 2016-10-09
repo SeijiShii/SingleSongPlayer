@@ -3,6 +3,7 @@ package net.c_kogyo.singlesongplayer.dialog;
 import android.animation.Animator;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
@@ -19,7 +20,6 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
-import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -80,17 +80,15 @@ public class SongPlayDialog extends DialogFragment {
 
                 } else if (action.equals(SongPlayService.ACTION_FADING_STARTED)) {
 
-                    isFadingOut = true;
-                    flashingFadeOutButton();
+                    isFading = true;
+                    flashFadeOutButton();
 
                 } else if (action.equals(SongPlayService.ACTION_FADING_REVERTED)) {
 
-                    isFadingOut = false;
-
+                    isFading = false;
                 } else if (action.equals(SongPlayService.ACTION_PLAY_STOPPED)) {
 
-                    dismiss();
-
+                    isFading = false;
                 }
 
             }
@@ -99,9 +97,9 @@ public class SongPlayDialog extends DialogFragment {
         IntentFilter intentFilter = new IntentFilter(SongPlayService.ACTION_PLAY_PAUSE_STATE_CHANGED);
         intentFilter.addAction(SongPlayService.ACTION_FADING_STARTED);
         intentFilter.addAction(SongPlayService.ACTION_FADING_REVERTED);
-        intentFilter.addAction(SongPlayService.ACTION_PLAY_STOPPED);
         intentFilter.addAction(SongPlayService.ACTION_PLAY_COMPLETED);
         intentFilter.addAction(SongPlayService.ACTION_UPDATE_PROGRESS);
+        intentFilter.addAction(SongPlayService.ACTION_PLAY_STOPPED);
         broadcastManager.registerReceiver(receiver, intentFilter);
 
         retriever = new MediaMetadataRetriever();
@@ -181,10 +179,10 @@ public class SongPlayDialog extends DialogFragment {
 
     }
 
-    private Button fadeOutButton;
+    private View fadeOutButton;
     private void initFadeOutButton() {
 
-        fadeOutButton = (Button) view.findViewById(R.id.fade_out_button);
+        fadeOutButton = view.findViewById(R.id.fade_out_button);
         fadeOutButton.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
@@ -210,49 +208,122 @@ public class SongPlayDialog extends DialogFragment {
         });
     }
 
-    private boolean isFadingOut;
-    private void flashingFadeOutButton() {
+    // フェードアウトが始まってから正常に戻るまでtrue
+    private boolean isFading;
+    private void flashFadeOutButton() {
 
-        final Handler handler = new Handler();
-        new Thread(new Runnable() {
+        ValueAnimator animator0 = ValueAnimator.ofFloat(1f, 0f);
+        animator0.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
-            public void run() {
+            public void onAnimationUpdate(ValueAnimator valueAnimator) {
+                fadeOutButton.setAlpha((float) valueAnimator.getAnimatedValue());
+                fadeOutButton.requestLayout();
+            }
+        });
+        animator0.setDuration(500);
+        animator0.addListener(new Animator.AnimatorListener() {
+            @Override
+            public void onAnimationStart(Animator animator) {
 
-                handler.post(new Runnable() {
+            }
+
+            @Override
+            public void onAnimationEnd(Animator animator) {
+
+                ValueAnimator animator1 = ValueAnimator.ofFloat(0f, 1f);
+                animator1.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
                     @Override
-                    public void run() {
-                        while (isFadingOut) {
+                    public void onAnimationUpdate(ValueAnimator valueAnimator) {
+                        fadeOutButton.setAlpha((float) valueAnimator.getAnimatedValue());
+                        fadeOutButton.requestLayout();
+                    }
+                });
+                animator1.setDuration(500);
+                animator1.start();
 
-                            flashFadeOut();
+                animator1.addListener(new Animator.AnimatorListener() {
+                    @Override
+                    public void onAnimationStart(Animator animator) {
+
+                    }
+
+                    @Override
+                    public void onAnimationEnd(Animator animator) {
+
+                        // 再帰的に繰り返す
+                        if (isFading) {
+                            flashFadeOutButton();
                         }
-                        fadeOutButton.setAlpha(1f);
+                    }
+
+                    @Override
+                    public void onAnimationCancel(Animator animator) {
+
+                    }
+
+                    @Override
+                    public void onAnimationRepeat(Animator animator) {
+
                     }
                 });
             }
-        }).start();
 
+            @Override
+            public void onAnimationCancel(Animator animator) {
+
+            }
+
+            @Override
+            public void onAnimationRepeat(Animator animator) {
+
+            }
+        });
+        animator0.start();
+
+        // 新しい方法を試してみたけど古い方法のほうがアニメーションがきれい
+//        ValueAnimator animator = ValueAnimator.ofFloat(1f, 0f);
+//        animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+//            @Override
+//            public void onAnimationUpdate(ValueAnimator valueAnimator) {
+//                fadeOutButton.setAlpha((float) valueAnimator.getAnimatedValue());
+//                fadeOutButton.requestLayout();
+//            }
+//        });
+//        animator.setDuration(1000);
+//        animator.setRepeatCount(ValueAnimator.REVERSE);
+//        animator.start();
+//
+//        animator.addListener(new Animator.AnimatorListener() {
+//            @Override
+//            public void onAnimationStart(Animator animator) {
+//
+//            }
+//
+//            @Override
+//            public void onAnimationEnd(Animator animator) {
+//
+//                if (!isFading) {
+//                    animator.cancel();
+//                    fadeOutButton.setAlpha(1f);
+//                }
+//            }
+//
+//            @Override
+//            public void onAnimationCancel(Animator animator) {
+//
+//            }
+//
+//            @Override
+//            public void onAnimationRepeat(Animator animator) {
+//
+//            }
+//        });
     }
 
-    private void flashFadeOut() {
-        List<Animator> animatorList = new ArrayList<>();
-
-        ObjectAnimator animator0 = ObjectAnimator.ofFloat(fadeOutButton, "alpha", 1f, 0f);
-        animator0.setDuration(500);
-
-        ObjectAnimator animator1 = ObjectAnimator.ofFloat(fadeOutButton, "alpha", 0f, 1f);
-        animator0.setDuration(500);
-
-        animatorList.add(animator0);
-        animatorList.add(animator1);
-
-        final AnimatorSet animatorSet = new AnimatorSet();
-        animatorSet.playSequentially(animatorList);
-    }
-
-    private Button playPauseButton;
+    private View playPauseButton;
     private void initPlayPauseButton() {
 
-        playPauseButton = (Button) view.findViewById(R.id.play_pause_button);
+        playPauseButton = view.findViewById(R.id.play_pause_button);
         playPauseButton.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
@@ -292,7 +363,7 @@ public class SongPlayDialog extends DialogFragment {
 
     private void initStopButton() {
 
-        Button stopButton = (Button) view.findViewById(R.id.stop_button);
+        View stopButton = view.findViewById(R.id.stop_button);
         stopButton.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
