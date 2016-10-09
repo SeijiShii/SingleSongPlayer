@@ -68,6 +68,32 @@ public class SongPlayDialog extends DialogFragment{
         duration = getArguments().getInt(SongPlayService.DURATION);
         durationString = getTimeString(duration);
 
+        initBroadCast();
+
+        retriever = new MediaMetadataRetriever();
+        retriever.setDataSource(filePath);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+
+        view = LayoutInflater.from(getActivity()).inflate(R.layout.song_play_dialog, null);
+        builder.setView(view);
+
+        initImage();
+        initTitleText();
+        initAlbumText();
+        initDurationText();
+        initSeekBar();
+        initFadeOutButton();
+        initPlayPauseButton();
+        initStopButton();
+
+        builder.setCancelable(false);
+
+        return builder.create();
+    }
+
+    private void initBroadCast() {
+
         broadcastManager = LocalBroadcastManager.getInstance(getActivity());
         receiver = new BroadcastReceiver(){
             @Override
@@ -109,26 +135,6 @@ public class SongPlayDialog extends DialogFragment{
         intentFilter.addAction(SongPlayService.ACTION_PLAY_STOPPED);
         broadcastManager.registerReceiver(receiver, intentFilter);
 
-        retriever = new MediaMetadataRetriever();
-        retriever.setDataSource(filePath);
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-
-        view = LayoutInflater.from(getActivity()).inflate(R.layout.song_play_dialog, null);
-        builder.setView(view);
-
-        initImage();
-        initTitleText();
-        initAlbumText();
-        initDurationText();
-        initSeekBar();
-        initFadeOutButton();
-        initPlayPauseButton();
-        initStopButton();
-
-        builder.setCancelable(false);
-
-        return builder.create();
     }
 
     private void initImage() {
@@ -375,9 +381,12 @@ public class SongPlayDialog extends DialogFragment{
     }
 
     private View playPauseButton;
+    private ImageView playPauseIcon;
     private void initPlayPauseButton() {
 
         playPauseButton = view.findViewById(R.id.play_pause_button);
+        playPauseIcon = (ImageView) view.findViewById(R.id.play_pause_icon);
+
         playPauseButton.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
@@ -407,11 +416,11 @@ public class SongPlayDialog extends DialogFragment{
 
         if (isPlaying) {
 
-            playPauseButton.setBackgroundResource(R.drawable.pause);
+            playPauseIcon.setBackgroundResource(R.drawable.pause);
 
         } else {
 
-            playPauseButton.setBackgroundResource(R.drawable.play);
+            playPauseIcon.setBackgroundResource(R.drawable.play);
         }
     }
 

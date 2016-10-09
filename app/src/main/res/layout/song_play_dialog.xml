@@ -89,7 +89,8 @@
                 android:layout_width="25dp"
                 android:layout_height="25dp"
                 android:background="@drawable/pause"
-                android:layout_centerInParent="true"/>
+                android:layout_centerInParent="true"
+                android:id="@+id/play_pause_icon"/>
 
         </RelativeLayout>
 
@@ -107,12 +108,6 @@
 
         </RelativeLayout>
 
-
-
-
-
     </LinearLayout>
-
-
 
 </LinearLayout>

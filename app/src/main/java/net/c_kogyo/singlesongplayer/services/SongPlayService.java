@@ -67,6 +67,11 @@ public class SongPlayService extends Service{
 
         mContext = getApplicationContext();
 
+        initBroadCast();
+    }
+
+    private void initBroadCast() {
+
         broadcastManager = LocalBroadcastManager.getInstance(this);
 
         receiver = new BroadcastReceiver() {
@@ -90,6 +95,7 @@ public class SongPlayService extends Service{
                     } else {
                         mPlayer.start();
                         muteOtherStream(true);
+                        trackMediaPlayer();
                     }
 
                     Intent playStateChangeIntent = new Intent(ACTION_PLAY_PAUSE_STATE_CHANGED);
@@ -112,17 +118,15 @@ public class SongPlayService extends Service{
 
                         }
                     }
-
                 }
             }
         };
+
     }
 
     private File mFile;
     private MediaPlayer mPlayer;
     private float currentVolume;
-
-
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
@@ -164,36 +168,7 @@ public class SongPlayService extends Service{
                 }
             });
 
-            // 現在のボリュームを追い続けるスレッド
-            // プログレスをアップデート
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-
-                    while (mPlayer.isPlaying()) {
-                        AudioManager manager = (AudioManager) mContext.getSystemService(AUDIO_SERVICE);
-                        int currentVolumeInt = manager.getStreamVolume(AudioManager.STREAM_MUSIC);
-                        int maxVolumeInt = manager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
-                        currentVolume = (float) currentVolumeInt / (float) maxVolumeInt;
-
-                        // プログレスをアップデート
-
-                        int duration = mPlayer.getDuration();
-                        int currentPosition = mPlayer.getCurrentPosition();
-
-                        Intent progressIntent = new Intent(ACTION_UPDATE_PROGRESS);
-//                        progressIntent.putExtra(DURATION, duration);
-                        progressIntent.putExtra(CURRENT_POSITION, currentPosition);
-                        broadcastManager.sendBroadcast(progressIntent);
-
-                        try {
-                            Thread.sleep(300);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }
-            }).start();
+            trackMediaPlayer();
         }
 
         return START_STICKY;
@@ -203,6 +178,40 @@ public class SongPlayService extends Service{
     public void onDestroy() {
         super.onDestroy();
         muteOtherStream(false);
+    }
+
+    private void trackMediaPlayer() {
+
+        // 現在のボリュームを追い続けるスレッド
+        // プログレスをアップデート
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+
+                while (mPlayer.isPlaying()) {
+                    AudioManager manager = (AudioManager) mContext.getSystemService(AUDIO_SERVICE);
+                    int currentVolumeInt = manager.getStreamVolume(AudioManager.STREAM_MUSIC);
+                    int maxVolumeInt = manager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+                    currentVolume = (float) currentVolumeInt / (float) maxVolumeInt;
+
+                    // プログレスをアップデート
+
+                    int duration = mPlayer.getDuration();
+                    int currentPosition = mPlayer.getCurrentPosition();
+
+                    Intent progressIntent = new Intent(ACTION_UPDATE_PROGRESS);
+//                        progressIntent.putExtra(DURATION, duration);
+                    progressIntent.putExtra(CURRENT_POSITION, currentPosition);
+                    broadcastManager.sendBroadcast(progressIntent);
+
+                    try {
+                        Thread.sleep(300);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }).start();
     }
 
     private NotificationManager notificationManager;
