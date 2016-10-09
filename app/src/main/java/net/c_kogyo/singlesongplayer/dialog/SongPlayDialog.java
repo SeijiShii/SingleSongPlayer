@@ -34,16 +34,14 @@ import java.util.List;
  * Created by SeijiShii on 2016/10/07.
  */
 
-public class SongPlayDialog extends DialogFragment {
-
-    public static final String TRACK_DURATION = SongPlayDialog.class.getName() + "track_duration";
-    public static final String TRACK_PROGRESS = SongPlayDialog.class.getName() + "track_progress";
+public class SongPlayDialog extends DialogFragment{
 
     public static final String ACTION_PLAY_PAUSE    = SongPlayDialog.class.getName() + "_action_play_pause";
     public static final String ACTION_STOP          = SongPlayDialog.class.getName() + "_action_stop";
     public static final String ACTION_FADE_IN_OUT   = SongPlayDialog.class.getName() + "action_fade_in_out";
 
     public static final String PROGRESS_CHANGED = SongPlayDialog.class.getName() + "progress_changed";
+    public static final String CHANGED_PROGRESS = SongPlayDialog.class.getName() + "changed_progress";
 
     public static SongPlayDialog newInstance(String filePath, int duration) {
 
@@ -67,7 +65,7 @@ public class SongPlayDialog extends DialogFragment {
         final String filePath = getArguments().getString(SongPlayService.FILE_PATH);
         if (filePath == null) return null;
 
-        int duration = getArguments().getInt(SongPlayService.DURATION);
+        duration = getArguments().getInt(SongPlayService.DURATION);
         durationString = getTimeString(duration);
 
         broadcastManager = LocalBroadcastManager.getInstance(getActivity());
@@ -97,8 +95,9 @@ public class SongPlayDialog extends DialogFragment {
 
                     int currentPosition = intent.getIntExtra(SongPlayService.CURRENT_POSITION, 0);
                     updateDurationText(currentPosition);
-                }
+                    updateSeekBar(currentPosition);
 
+                }
             }
         };
 
@@ -165,8 +164,11 @@ public class SongPlayDialog extends DialogFragment {
         albumText.setText(albumString);
     }
 
+    private int duration;
     private String durationString;
     private TextView durationText;
+    private KillableSeekbarListener seekbarListener;
+
     private void initDurationText() {
         durationText = (TextView) view.findViewById(R.id.duration_text);
         updateDurationText(0);
@@ -183,23 +185,52 @@ public class SongPlayDialog extends DialogFragment {
     private void initSeekBar() {
 
         seekBar = (SeekBar) view.findViewById(R.id.seek_bar);
-        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+        seekBar.setMax(duration);
+        seekbarListener = new KillableSeekbarListener();
+        seekBar.setOnSeekBarChangeListener(seekbarListener);
 
-            }
+    }
 
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
+    private void updateSeekBar(int currentPosition) {
 
-            }
+        // リスナが相互に干渉して音切れになるため一度kill
+        seekbarListener.kill(true);
+        seekBar.setProgress(currentPosition);
+        seekbarListener.kill(false);
 
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
+    }
 
-            }
-        });
+    class KillableSeekbarListener implements SeekBar.OnSeekBarChangeListener {
 
+        boolean killed;
+
+        public boolean isKilled() {
+            return killed;
+        }
+
+        public void kill(boolean kill) {
+            this.killed = kill;
+        }
+
+        @Override
+        public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+
+            if (killed) return;
+
+            Intent progressChangedIntent = new Intent(PROGRESS_CHANGED);
+            progressChangedIntent.putExtra(CHANGED_PROGRESS, i);
+            broadcastManager.sendBroadcast(progressChangedIntent);
+        }
+
+        @Override
+        public void onStartTrackingTouch(SeekBar seekBar) {
+
+        }
+
+        @Override
+        public void onStopTrackingTouch(SeekBar seekBar) {
+
+        }
     }
 
     private View fadeOutButton;

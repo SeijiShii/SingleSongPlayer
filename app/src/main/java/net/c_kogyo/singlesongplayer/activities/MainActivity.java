@@ -81,7 +81,8 @@ public class MainActivity extends AppCompatActivity {
                     dialog = SongPlayDialog.newInstance(filePath, duration);
                     dialog.setCancelable(false);
                     dialog.show(getFragmentManager(), null);
-                } else if (action.equals(SongPlayService.ACTION_PLAY_STOPPED)) {
+                } else if (action.equals(SongPlayService.ACTION_PLAY_STOPPED)
+                        || action.equals(SongPlayService.ACTION_PLAY_COMPLETED)) {
 
                     dialog.setCancelable(true);
                     dialog.dismiss();
@@ -112,6 +113,7 @@ public class MainActivity extends AppCompatActivity {
 
         IntentFilter intentFilter = new IntentFilter(SongPlayService.ACTION_PLAY_STARTED);
         intentFilter.addAction(SongPlayService.ACTION_PLAY_STOPPED);
+        intentFilter.addAction(SongPlayService.ACTION_PLAY_COMPLETED);
         broadcastManager.registerReceiver(receiver, intentFilter);
 
     }

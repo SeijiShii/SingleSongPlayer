@@ -79,7 +79,7 @@ public class SongPlayService extends Service{
                     if (mPlayer.isPlaying()) {
                         mPlayer.stop();
                         muteOtherStream(false);
-                        notificationManager.cancel(notifyId);
+                        notificationManager.cancel(NOTIFY_ID);
                         stopSelf();
                     }
                 } else if (action.equals(SongPlayDialog.ACTION_PLAY_PAUSE)) {
@@ -100,6 +100,18 @@ public class SongPlayService extends Service{
 
                     isFadingOut = !isFadingOut;
                     fadeOutIn();
+
+                } else if (action.equals(SongPlayDialog.PROGRESS_CHANGED)) {
+
+                    int progress = intent.getIntExtra(SongPlayDialog.CHANGED_PROGRESS, -1);
+                    if (progress >= 0) {
+
+                        if (mPlayer.isPlaying()) {
+
+                            mPlayer.seekTo(progress);
+
+                        }
+                    }
 
                 }
             }
@@ -147,6 +159,7 @@ public class SongPlayService extends Service{
                     LocalBroadcastManager.getInstance(mContext).sendBroadcast(new Intent(ACTION_PLAY_COMPLETED));
                     stopSelf();
                     muteOtherStream(false);
+                    notificationManager.cancel(NOTIFY_ID);
 
                 }
             });
@@ -169,7 +182,7 @@ public class SongPlayService extends Service{
                         int currentPosition = mPlayer.getCurrentPosition();
 
                         Intent progressIntent = new Intent(ACTION_UPDATE_PROGRESS);
-                        progressIntent.putExtra(DURATION, duration);
+//                        progressIntent.putExtra(DURATION, duration);
                         progressIntent.putExtra(CURRENT_POSITION, currentPosition);
                         broadcastManager.sendBroadcast(progressIntent);
 
@@ -194,7 +207,7 @@ public class SongPlayService extends Service{
 
     private NotificationManager notificationManager;
     private NotificationCompat.Builder mBuilder;
-    private static int notifyId = 100;
+    final private static int NOTIFY_ID = 100;
     void createNotification() {
 
         mBuilder = new NotificationCompat.Builder(this);
@@ -218,7 +231,7 @@ public class SongPlayService extends Service{
         mBuilder.setDeleteIntent(deletePendingIntent);
 
         notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        notificationManager.notify(notifyId, mBuilder.build());
+        notificationManager.notify(NOTIFY_ID, mBuilder.build());
 
     }
 
