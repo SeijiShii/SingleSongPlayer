@@ -80,10 +80,26 @@
                     android:layout_height="match_parent"
                     android:id="@+id/scroll_view">
 
-                    <net.c_kogyo.singlesongplayer.view.CollapseFileTreeView
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:id="@+id/file_view"/>
+                        android:orientation="vertical">
+
+                        <net.c_kogyo.singlesongplayer.view.CollapseFileTreeView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:id="@+id/file_view"/>
+
+                        <!-- History list -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:id="@+id/history_list"/>
+
+                    </LinearLayout>
+
+
 
                 </ScrollView>
 

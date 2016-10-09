@@ -130,7 +130,7 @@ public class SoundFileListCell extends LinearLayout {
 
     }
 
-    private void fadeOut() {
+    public void fadeOut() {
 
         ValueAnimator animator = ValueAnimator.ofFloat(1, 0);
         animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {

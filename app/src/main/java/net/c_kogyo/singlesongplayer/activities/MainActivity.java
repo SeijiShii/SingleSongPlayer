@@ -3,8 +3,6 @@ package net.c_kogyo.singlesongplayer.activities;
 import android.Manifest;
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
-import android.app.Dialog;
-import android.app.DialogFragment;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -44,10 +42,12 @@ import net.c_kogyo.singlesongplayer.R;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashSet;
 
 import net.c_kogyo.singlesongplayer.dialog.SongPlayDialog;
 import net.c_kogyo.singlesongplayer.services.SongPlayService;
 import net.c_kogyo.singlesongplayer.view.CollapseFileTreeView;
+import net.c_kogyo.singlesongplayer.view.SoundFileCell;
 import net.c_kogyo.singlesongplayer.view.SoundFileListCell;
 
 public class MainActivity extends AppCompatActivity {
@@ -104,7 +104,6 @@ public class MainActivity extends AppCompatActivity {
         initPlayButton();
     }
 
-
     @Override
     protected void onResume() {
         super.onResume();
@@ -134,6 +133,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         saveQueueList();
+        saveHistoryFiles();
 
         broadcastManager.unregisterReceiver(receiver);
     }
@@ -192,6 +192,7 @@ public class MainActivity extends AppCompatActivity {
         drawer = (LinearLayout) findViewById(R.id.drawer);
 
         initDirTab();
+        initHistoryList();
 
         // 画面幅を検出し初期状態はタブのみが出ているようにする
         Display display = getWindowManager().getDefaultDisplay();
@@ -296,7 +297,7 @@ public class MainActivity extends AppCompatActivity {
 //                findViewById(R.id.scroll_view).requestLayout();
             }
 
-        }, new CollapseFileTreeView.OnFileClickListener() {
+        }, new SoundFileCell.OnFileClickListener() {
             @Override
             public void onClick(File file) {
                 // TODO ファイルクリック時の処理
@@ -646,8 +647,109 @@ public class MainActivity extends AppCompatActivity {
 
                 startService(songPlayIntent);
 
+                removeFirstFileInQueueList();
             }
         });
+    }
+
+    private final int HISTORY_COUNT = 10;
+    private final String HISTORY_FILES_TAG = "history_files_tag";
+    private ArrayList<File> historyFiles;
+    private LinearLayout historyList;
+    private void initHistoryList() {
+
+        historyList = (LinearLayout) findViewById(R.id.history_list);
+        historyList.removeAllViews();
+
+        loadHistoryFiles();
+
+        for (File file : historyFiles) {
+
+            SoundFileCell cell = new SoundFileCell(this, file, new SoundFileCell.OnFileClickListener() {
+                @Override
+                public void onClick(File file) {
+                    animateDrawer();
+                    addSoundFile(file);
+                }
+            });
+
+            historyList.addView(cell);
+        }
+
+    }
+
+    private void addToHistoryList(File file) {
+
+        // リストの最初のものだったら何もしない
+        if (historyFiles.size() > 0
+                && historyFiles.get(0).getAbsolutePath().equals(file.getAbsolutePath())) {
+            return;
+        }
+
+        // 最初以外でリストに含まてているものだったら一度消去
+        if (historyFiles.contains(file)) {
+            int index = historyFiles.indexOf(file);
+            historyFiles.remove(file);
+            historyList.removeViewAt(index);
+        }
+
+        historyFiles.add(0, file);
+        if (historyFiles.size() > HISTORY_COUNT) {
+            historyFiles.remove(HISTORY_COUNT);
+        }
+
+        SoundFileCell cell = new SoundFileCell(this, file, new SoundFileCell.OnFileClickListener() {
+            @Override
+            public void onClick(File file) {
+                animateDrawer();
+                addSoundFile(file);
+            }
+        });
+
+        historyList.addView(cell, 0);
+        if (historyList.getChildCount() >= HISTORY_COUNT) {
+            historyList.removeViewAt(HISTORY_COUNT);
+        }
+    }
+
+    private void loadHistoryFiles() {
+
+        SharedPreferences prefs = getSharedPreferences(SSP_PREF_TAG, MODE_PRIVATE);
+        historyFiles = new ArrayList<>();
+
+        HashSet<String> set = new HashSet<>();
+        prefs.getStringSet(HISTORY_FILES_TAG, set);
+
+        for (String path : set) {
+
+            historyFiles.add(new File(path));
+        }
+    }
+
+    private void removeFirstFileInQueueList() {
+
+        if (queueList.size() <= 0) return;
+
+        addToHistoryList(queueList.get(0));
+
+        ((SoundFileListCell) queueListView.getChildAt(0)).fadeOut();
+
+    }
+
+    private void saveHistoryFiles() {
+
+        HashSet<String> set = new HashSet<>();
+
+        for (File file : historyFiles) {
+
+            set.add(file.getAbsolutePath());
+        }
+
+        SharedPreferences prefs = getSharedPreferences(SSP_PREF_TAG, MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putStringSet(HISTORY_FILES_TAG, set);
+
+        editor.apply();
     }
 
     enum CellShadowMove{
