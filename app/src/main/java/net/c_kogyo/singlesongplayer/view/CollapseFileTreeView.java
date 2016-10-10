@@ -5,6 +5,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
+import android.os.Handler;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -193,7 +194,14 @@ public class CollapseFileTreeView extends LinearLayout {
 
         for (int i = 0 ; i < childContainer.getChildCount() ; i++ ) {
 
-            height += ((CollapseFileTreeView)(childContainer.getChildAt(i))).getLayoutParams().height;
+//            View view = childContainer.getChildAt(i);
+//            if (view instanceof CollapseFileTreeView) {
+//
+//            } else if (view instanceof SoundFileCell) {
+//
+//            }
+
+            height += (childContainer.getChildAt(i)).getLayoutParams().height;
 
         }
 
@@ -214,6 +222,7 @@ public class CollapseFileTreeView extends LinearLayout {
     }
 
     private boolean isChildOpen = false;
+    private boolean isGrandChildrenSet = false;
     private void animateChildContainer() {
 
         int origin, target;
@@ -245,8 +254,22 @@ public class CollapseFileTreeView extends LinearLayout {
 
         isChildOpen = !isChildOpen;
 
-        // 孫階層のファイルとフォルダをセット
-        addGrandChildren();
+        final Handler gcHandler = new Handler();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                gcHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        // 孫階層のファイルとフォルダをセット
+                        addGrandChildren();
+                        isGrandChildrenSet = true;
+                    }
+                });
+            }
+        }).start();
+
+
     }
 
     private void addGrandChildren() {

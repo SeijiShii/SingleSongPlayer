@@ -136,40 +136,43 @@ public class SongPlayService extends Service{
         intentFilter.addAction(SongPlayDialog.PROGRESS_CHANGED);
         broadcastManager.registerReceiver(receiver, intentFilter);
 
+        if (intent == null) return START_NOT_STICKY;
+
         String filePath = intent.getStringExtra(MainActivity.SONG_FILE_PATH);
 
         if (filePath == null) return START_NOT_STICKY;
 
         mFile = new File(filePath);
 
-        if (mPlayer == null) {
-            mPlayer = MediaPlayer.create(mContext, Uri.fromFile(mFile));
-            mPlayer.start();
-            muteOtherStream(true);
+        mPlayer = MediaPlayer.create(mContext, Uri.fromFile(mFile));
 
-            if (mPlayer.isPlaying()) {
+        mPlayer.start();
+        muteOtherStream(true);
 
-                Intent playStartIntent = new Intent(ACTION_PLAY_STARTED);
-                playStartIntent.putExtra(FILE_PATH, mFile.getAbsolutePath());
-                playStartIntent.putExtra(DURATION, mPlayer.getDuration());
-                LocalBroadcastManager.getInstance(mContext).sendBroadcast(playStartIntent);
-                createNotification();
-            }
+        if (mPlayer.isPlaying()) {
 
-            mPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                @Override
-                public void onCompletion(MediaPlayer mp) {
-
-                    LocalBroadcastManager.getInstance(mContext).sendBroadcast(new Intent(ACTION_PLAY_COMPLETED));
-                    stopSelf();
-                    muteOtherStream(false);
-                    notificationManager.cancel(NOTIFY_ID);
-
-                }
-            });
-
-            trackMediaPlayer();
+            Intent playStartIntent = new Intent(ACTION_PLAY_STARTED);
+            playStartIntent.putExtra(FILE_PATH, mFile.getAbsolutePath());
+            playStartIntent.putExtra(DURATION, mPlayer.getDuration());
+            LocalBroadcastManager.getInstance(mContext).sendBroadcast(playStartIntent);
+            createNotification();
         }
+
+
+
+        mPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer mp) {
+
+                LocalBroadcastManager.getInstance(mContext).sendBroadcast(new Intent(ACTION_PLAY_COMPLETED));
+                stopSelf();
+                muteOtherStream(false);
+                notificationManager.cancel(NOTIFY_ID);
+
+            }
+        });
+
+        trackMediaPlayer();
 
         return START_STICKY;
     }
