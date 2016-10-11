@@ -231,8 +231,6 @@ public class SongPlayService extends Service{
         String trackTitle = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
         mBuilder.setContentText(trackTitle);
 
-//        Intent dummyIntent = new Intent(mContext, IntentCatcherDummyService.class);
-
         Intent launchIntent = new Intent(this, MainActivity.class);
 
         // The stack builder object will contain an artificial back stack for the started Activity.
