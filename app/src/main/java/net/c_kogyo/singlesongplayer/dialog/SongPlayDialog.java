@@ -1,8 +1,6 @@
 package net.c_kogyo.singlesongplayer.dialog;
 
 import android.animation.Animator;
-import android.animation.AnimatorSet;
-import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -15,7 +13,6 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
 import android.os.Bundle;
-import android.os.Handler;
 import android.support.v4.content.LocalBroadcastManager;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -26,9 +23,6 @@ import android.widget.TextView;
 
 import net.c_kogyo.singlesongplayer.R;
 import net.c_kogyo.singlesongplayer.services.SongPlayService;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Created by SeijiShii on 2016/10/07.
@@ -68,7 +62,7 @@ public class SongPlayDialog extends DialogFragment{
         duration = getArguments().getInt(SongPlayService.DURATION);
         durationString = getTimeString(duration);
 
-        initBroadCast();
+        initBroadcast();
 
         retriever = new MediaMetadataRetriever();
         retriever.setDataSource(filePath);
@@ -92,7 +86,7 @@ public class SongPlayDialog extends DialogFragment{
         return builder.create();
     }
 
-    private void initBroadCast() {
+    private void initBroadcast() {
 
         broadcastManager = LocalBroadcastManager.getInstance(getActivity());
         receiver = new BroadcastReceiver(){

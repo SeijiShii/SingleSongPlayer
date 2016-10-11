@@ -15,6 +15,7 @@ import android.net.Uri;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.TaskStackBuilder;
 import android.support.v4.content.LocalBroadcastManager;
 
 import net.c_kogyo.singlesongplayer.R;
@@ -67,10 +68,10 @@ public class SongPlayService extends Service{
 
         mContext = getApplicationContext();
 
-        initBroadCast();
+        initBroadcast();
     }
 
-    private void initBroadCast() {
+    private void initBroadcast() {
 
         broadcastManager = LocalBroadcastManager.getInstance(this);
 
@@ -198,13 +199,12 @@ public class SongPlayService extends Service{
                     currentVolume = (float) currentVolumeInt / (float) maxVolumeInt;
 
                     // プログレスをアップデート
-
-                    int duration = mPlayer.getDuration();
-                    int currentPosition = mPlayer.getCurrentPosition();
-
                     Intent progressIntent = new Intent(ACTION_UPDATE_PROGRESS);
-//                        progressIntent.putExtra(DURATION, duration);
-                    progressIntent.putExtra(CURRENT_POSITION, currentPosition);
+
+                    // 復帰に向けてファイルパスをセット
+                    progressIntent.putExtra(FILE_PATH, mFile.getAbsolutePath());
+                    progressIntent.putExtra(DURATION, mPlayer.getDuration());
+                    progressIntent.putExtra(CURRENT_POSITION, mPlayer.getCurrentPosition());
                     broadcastManager.sendBroadcast(progressIntent);
 
                     try {
@@ -231,10 +231,29 @@ public class SongPlayService extends Service{
         String trackTitle = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
         mBuilder.setContentText(trackTitle);
 
-        Intent dummyIntent = new Intent(mContext, IntentCatcherDummyService.class);
-        PendingIntent relaunchPendingIntent = PendingIntent.getService(mContext, 0, dummyIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+//        Intent dummyIntent = new Intent(mContext, IntentCatcherDummyService.class);
+
+        Intent launchIntent = new Intent(this, MainActivity.class);
+
+        // The stack builder object will contain an artificial back stack for the started Activity.
+        // This ensures that navigating backward from the Activity leads out of
+        // your application to the Home screen.
+        TaskStackBuilder stackBuilder = TaskStackBuilder.create(this);
+        // Adds the back stack for the Intent (but not the Intent itself)
+        stackBuilder.addParentStack(MainActivity.class);
+        // Adds the Intent that starts the Activity to the top of the stack
+        stackBuilder.addNextIntent(launchIntent);
+        PendingIntent relaunchPendingIntent =
+                stackBuilder.getPendingIntent(
+                        0,
+                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_ONE_SHOT
+                );
+        // バックボタンで重複しないためにPendingIntent.FLAG_ONE_SHOTを含める必要があった。
+
+//        PendingIntent relaunchPendingIntent = PendingIntent.getService(mContext, 0, launchIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
         mBuilder.setContentIntent(relaunchPendingIntent);
+
 
         Intent deleteIntent = new Intent(mContext, SongPlayService.class);
         deleteIntent.setAction(ACTION_DELETE);

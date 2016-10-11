@@ -13,7 +13,8 @@ import net.c_kogyo.singlesongplayer.activities.MainActivity;
  */
 public class IntentCatcherDummyService extends Service {
 
-    public static final String DUMMY_SERVICE_LAUNCH_INTENT = IntentCatcherDummyService.class.getName() + "_launch_dummy_service";
+    public static final String ACTION_LAUNCH_FROM_DUMMY_SERVICE
+            = IntentCatcherDummyService.class.getCanonicalName() + "_action_launch_from_dummy_service";
     public static final String TAG = IntentCatcherDummyService.class.getCanonicalName() + "_TAG";
 
     @Nullable
@@ -28,7 +29,15 @@ public class IntentCatcherDummyService extends Service {
         Log.i(TAG, "Intent Catcher Dummy Service Started!");
 
         if (!MainActivity.isForeground()) {
+
+            String filePath = intent.getStringExtra(SongPlayService.FILE_PATH);
+            int duration = intent.getIntExtra(SongPlayService.DURATION, 0);
+
             Intent mainIntent = new Intent(this, MainActivity.class);
+            mainIntent.setAction(ACTION_LAUNCH_FROM_DUMMY_SERVICE);
+            mainIntent.putExtra(SongPlayService.FILE_PATH, filePath);
+            mainIntent.putExtra(SongPlayService.DURATION, duration);
+
             mainIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(mainIntent);
         }

@@ -67,6 +67,23 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        initBroadcast();
+
+        setContentView(R.layout.activity_main);
+
+        queueList = new ArrayList<>();
+
+        initAdView();
+
+        initDrawer();
+        initFileView();
+
+        initQueueListView();
+        initPlayButton();
+    }
+
+    private void initBroadcast() {
+
         broadcastManager = LocalBroadcastManager.getInstance(this);
 
         receiver = new BroadcastReceiver() {
@@ -88,22 +105,34 @@ public class MainActivity extends AppCompatActivity {
 
                     dialog.setCancelable(true);
                     dialog.dismiss();
+                    dialog = null;
+
+                } else if (action.equals(SongPlayService.ACTION_UPDATE_PROGRESS)) {
+                    // 通知から復帰時のダイアログ再現
+
+                    if (dialog == null) {
+
+                        String filePath = intent.getStringExtra(SongPlayService.FILE_PATH);
+                        int duration = intent.getIntExtra(SongPlayService.DURATION, 0);
+
+                        dialog = SongPlayDialog.newInstance(filePath, duration);
+                        dialog.setCancelable(false);
+                        dialog.show(getFragmentManager(), null);
+                    } else if (dialog.isHidden()) {
+                        dialog.setCancelable(false);
+                        dialog.show(getFragmentManager(), null);
+                    }
                 }
 
             }
         };
 
-        setContentView(R.layout.activity_main);
+        IntentFilter intentFilter = new IntentFilter(SongPlayService.ACTION_PLAY_STARTED);
+        intentFilter.addAction(SongPlayService.ACTION_PLAY_STOPPED);
+        intentFilter.addAction(SongPlayService.ACTION_PLAY_COMPLETED);
+        intentFilter.addAction(SongPlayService.ACTION_UPDATE_PROGRESS);
+        broadcastManager.registerReceiver(receiver, intentFilter);
 
-        queueList = new ArrayList<>();
-
-        initAdView();
-
-        initDrawer();
-        initFileView();
-
-        initQueueListView();
-        initPlayButton();
     }
 
     @Override
@@ -112,11 +141,6 @@ public class MainActivity extends AppCompatActivity {
         loadQueueList();
         setQueueListView();
         loadHistoryFiles();
-
-        IntentFilter intentFilter = new IntentFilter(SongPlayService.ACTION_PLAY_STARTED);
-        intentFilter.addAction(SongPlayService.ACTION_PLAY_STOPPED);
-        intentFilter.addAction(SongPlayService.ACTION_PLAY_COMPLETED);
-        broadcastManager.registerReceiver(receiver, intentFilter);
 
     }
 
@@ -443,6 +467,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean onLongClick(View view) {
 
+                // セルが一つしかなかったらドラッグがスタートしないようにする
+                if (queueListView.getChildCount() <= 1) {
+                    return true;
+                }
+
                 // ドラッグスタート時にcellを仕込む
                 cellDragged = (SoundFileListCell) view;
                 screenFrame.setVisibility(View.VISIBLE);
@@ -573,16 +602,10 @@ public class MainActivity extends AppCompatActivity {
                         screenFrame.removeAllViews();
                         screenFrame.setVisibility(View.INVISIBLE);
 
-//                        ObjectAnimator animator1 = ObjectAnimator.ofFloat(toCell, "translationY", target, 0);
-//                        animator1.setDuration(300);
-//                        animator1.start();
-
-
-
-
                         Log.i(SoundFileListCell.class.getSimpleName(), "Drag ended!");
 
                         return true;
+
                 }
                 return true;
             }
