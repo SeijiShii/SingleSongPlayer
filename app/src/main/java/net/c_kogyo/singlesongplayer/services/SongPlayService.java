@@ -1,5 +1,6 @@
 package net.c_kogyo.singlesongplayer.services;
 
+import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
@@ -101,7 +102,9 @@ public class SongPlayService extends Service{
 
                     Intent playStateChangeIntent = new Intent(ACTION_PLAY_PAUSE_STATE_CHANGED);
                     playStateChangeIntent.putExtra(IS_PLAYING, mPlayer.isPlaying());
-                    broadcastManager.sendBroadcast(playStateChangeIntent);
+
+                    // sendBroadcastSyncにしないとプログレスとの兼ね合いでうまくない
+                    broadcastManager.sendBroadcastSync(playStateChangeIntent);
 
                 } else if (action.equals(SongPlayDialog.ACTION_FADE_IN_OUT) ) {
 
@@ -259,8 +262,12 @@ public class SongPlayService extends Service{
 
         mBuilder.setDeleteIntent(deletePendingIntent);
 
+        mBuilder.setOngoing(true);
+
         notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         notificationManager.notify(NOTIFY_ID, mBuilder.build());
+
+
 
     }
 
@@ -375,6 +382,7 @@ public class SongPlayService extends Service{
                 if (secCounter > 5000 || manager.getStreamVolume(AudioManager.STREAM_MUSIC) < 0) {
 
                     mPlayer.stop();
+                    notificationManager.cancel(NOTIFY_ID);
                     muteOtherStream(false);
 
                     Intent stopIntent = new Intent(ACTION_PLAY_STOPPED);
